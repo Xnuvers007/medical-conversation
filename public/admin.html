@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Kelola Data Dokter</h2>
+    <form id="addDoctorForm">
+      <input type="text" id="name" placeholder="Nama Dokter" required>
+      <input type="text" id="specialization" placeholder="Spesialisasi" required>
+      <input type="text" id="phone" placeholder="Nomor WhatsApp (62xxx)" required>
+      <input type="text" id="photo_url" placeholder="Foto URL" required>
+      <button type="submit">Tambah Dokter</button>
+    </form>
+
+    <button id="logoutButton">Logout</button>
+
+    <h3>Daftar Dokter</h3>
+    <ul id="doctorList"></ul>
+  </div>
+
+  <script>
+    function loadDoctors() {
+      fetch('/doctors')
+        .then(res => res.json())
+        .then(data => {
+          const list = document.getElementById('doctorList');
+          list.innerHTML = '';
+          data.forEach(doc => {
+            const item = document.createElement('li');
+            item.innerHTML = `
+              ${doc.name} - ${doc.specialization} 
+              <button onclick="deleteDoctor(${doc.id})">Hapus</button>
+            `;
+            list.appendChild(item);
+          });
+        });
+    }
+
+    document.getElementById('logoutButton').addEventListener('click', function() {
+    fetch('/logout', { method: 'POST' })
+      .then(() => {
+        window.location.href = '/';
+      });
+  });
+
+
+    document.getElementById('addDoctorForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const specialization = document.getElementById('specialization').value;
+      const phone = document.getElementById('phone').value;
+      const photo_url = document.getElementById('photo_url').value;
+
+      fetch('/doctors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, specialization, phone, photo_url })
+      }).then(() => {
+        loadDoctors();
+        e.target.reset();
+      });
+    });
+
+    function deleteDoctor(id) {
+      fetch(`/doctors/${id}`, { method: 'DELETE' })
+        .then(() => loadDoctors());
+    }
+
+    loadDoctors();
+  </script>
+</body>
+</html>

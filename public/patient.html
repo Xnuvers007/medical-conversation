@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Booking Konsultasi</h2>
+    <form id="bookingForm">
+      <select id="doctorSelect" required title="Pemilihan dokter"></select>
+      <textarea id="message" placeholder="Tulis keluhan Anda" required></textarea>
+      <button type="submit">Kirim ke Dokter</button>
+    </form>
+    <button id="logoutButton">Logout</button>
+  </div>
+
+  <script>
+    // Load dokter
+    fetch('/doctors')
+      .then(res => res.json())
+      .then(data => {
+        const select = document.getElementById('doctorSelect');
+        data.forEach(doc => {
+          const opt = document.createElement('option');
+          opt.value = doc.id;
+          opt.textContent = doc.name + ' - ' + doc.specialization;
+          select.appendChild(opt);
+        });
+      });
+
+
+      document.getElementById('logoutButton').addEventListener('click', function() {
+    fetch('/logout', { method: 'POST' })
+      .then(() => {
+        window.location.href = '/';
+      });
+  });
+
+    // Submit booking
+    document.getElementById('bookingForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const doctor_id = document.getElementById('doctorSelect').value;
+      const message = document.getElementById('message').value;
+
+      fetch('/get-user', { method: 'GET' })
+        .then(res => res.json())
+        .then(user => {
+          fetch('/book', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: user.id, doctor_id, message })
+          })
+          .then(res => res.json())
+          .then(data => {
+            alert('Pesan dikirim ke dokter!');
+            document.getElementById('message').value = '';
+          });
+        });
+    });
+  </script>
+</body>
+</html>
