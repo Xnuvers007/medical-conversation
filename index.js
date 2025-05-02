@@ -4,6 +4,10 @@ const bodyParser = require('body-parser');
 const { initWhatsAppBot } = require('./bot');
 const path = require('path');
 const session = require('express-session');
+const crypto = require('crypto');
+
+// random hex string
+const randomHex = crypto.randomBytes(16).toString('hex');
 
 const app = express();
 const db = new sqlite3.Database('./db.sqlite');
@@ -13,17 +17,31 @@ app.use(bodyParser.json());
 app.use(express.static('public'));
 
 app.use(session({
-    secret: 'secret123',
+    secret: randomHex,
     resave: false,
     saveUninitialized: true
   }));
 
 function isAuthenticated(req, res, next) {
     if (req.session.user) {
-      return next();
+        return next();
     }
     res.status(403).json({ error: 'Unauthorized' });
-  }
+}
+
+function isAdmin(req, res, next) {
+    if (req.session.user && req.session.user.role === 'admin') {
+        return next();
+    }
+    res.status(403).json({ error: 'Unauthorized - Admins only' });
+}
+
+function isUser(req, res, next) {
+    if (req.session.user && req.session.user.role === 'patient') {
+        return next();
+    }
+    res.status(403).json({ error: 'Unauthorized - Users only' });
+}
 
 // === Setup Database ===
 db.serialize(() => {
@@ -59,6 +77,7 @@ db.serialize(() => {
     booking_id INTEGER,
     sender TEXT CHECK(sender IN ('doctor', 'patient')),
     message TEXT,
+    msg_id TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(booking_id) REFERENCES bookings(id)
   )`);
@@ -128,7 +147,7 @@ app.post('/register', (req, res) => {
   });
 
 // Get current logged in user
-app.get('/get-user', isAuthenticated, (req, res) => {
+app.get('/get-user', isAuthenticated || isUser, (req, res) => {
     if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
     res.json(req.session.user);
   });
@@ -145,9 +164,14 @@ app.get('/get-user', isAuthenticated, (req, res) => {
   });
   
   // Add new doctor (admin only)
-  app.post('/doctors', isAuthenticated, (req, res) => {
+  app.post('/doctors', isAuthenticated && isAdmin, (req, res) => {
     if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
     const { name, specialization, phone, photo_url } = req.body;
+    
+    if (!photo_url.startsWith('http://') && !photo_url.startsWith('https://')) {
+      return res.status(400).json({ error: 'Invalid photo URL' });
+    }
+
     db.run(`INSERT INTO doctors (name, specialization, phone, photo_url) VALUES (?, ?, ?, ?)`,
       [name, specialization, phone, photo_url], (err) => {
         if (err) return res.status(500).json({ error: 'Gagal tambah dokter' });
@@ -156,7 +180,7 @@ app.get('/get-user', isAuthenticated, (req, res) => {
   });
   
   // Delete doctor (admin only)
-  app.delete('/doctors/:id', isAuthenticated, (req, res) => {
+  app.delete('/doctors/:id', isAuthenticated && isAdmin, (req, res) => {
     if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
     const id = req.params.id;
     db.run(`DELETE FROM doctors WHERE id = ?`, [id], function(err) {
