@@ -6,6 +6,8 @@ const path = require('path');
 const session = require('express-session');
 const crypto = require('crypto');
 
+require('dotenv').config();
+
 // random hex string
 const randomHex = crypto.randomBytes(16).toString('hex');
 
@@ -78,6 +80,7 @@ db.serialize(() => {
     sender TEXT CHECK(sender IN ('doctor', 'patient')),
     message TEXT,
     msg_id TEXT,
+    has_media BOOLEAN, 
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(booking_id) REFERENCES bookings(id)
   )`);
@@ -131,8 +134,10 @@ app.post('/register', (req, res) => {
     const { username, password } = req.body;
   
     // Hardcoded admin login
-    if (username === 'indra' && password === 'Xnuvers007') {
-      req.session.user = { username: 'indra', role: 'admin' };
+    const adminUsername = process.env.ADMIN_USERNAME;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (username === adminUsername && password === adminPassword) {
+      req.session.user = { username: adminUsername, role: 'admin' };
       return res.json({ status: 'success', role: 'admin' });
     }
   
