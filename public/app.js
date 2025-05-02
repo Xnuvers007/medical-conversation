@@ -14,8 +14,8 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
   }
 
   // Cegah XSS dengan meng-encode karakter berbahaya
-  const sanitizedUsername = username.replace(/[<>'"]/g, ''); 
-  const sanitizedPassword = password.replace(/[<>'"]/g, '');
+  const sanitizedUsername = username.replace(/[<>:'"]/g, ''); 
+  const sanitizedPassword = password.replace(/[<>:'"]/g, '');
 
   console.log('Submitting login:', { sanitizedUsername, sanitizedPassword });
 

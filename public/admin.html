@@ -257,13 +257,13 @@
       <button type="submit">Tambah Dokter</button>
     </form>
 
-    <button id="logoutButton">Logout</button>
+    <button id="logoutButton" type="button">Keluar</button>
 
     <h3>Daftar Dokter</h3>
     <ul id="doctorList"></ul>
   </div>
 
-  <script>
+  <script async>
     // Periksa semua form jika valid
     document.querySelectorAll('form').forEach(form => {
       form.addEventListener('submit', function(e) {
@@ -310,7 +310,7 @@
                 <span class="doctor-name">${doc.name}</span>
                 <span class="doctor-spec">${doc.specialization} • WA: ${doc.phone}</span>
               </div>
-              <button onclick="deleteDoctor(${doc.id})">Hapus</button>
+              <button class="deleteDoctorButton" data-id="${doc.id}">Hapus</button>
             `;
             list.appendChild(item);
           });
@@ -319,12 +319,24 @@
     }
 
     document.getElementById('logoutButton').addEventListener('click', function() {
-      fetch('/logout', { method: 'POST' })
-        .then(res => {
-          if (!res.ok) throw new Error('Gagal logout');
-          window.location.href = '/';
-        })
-        .catch(error => console.error('Error:', error));
+      Swal.fire({
+        title: 'Keluar?',
+        text: 'Apakah Anda yakin ingin keluar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Keluar',
+        cancelButtonText: 'Tidak',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch('/logout', { method: 'POST' })
+            .then(res => {
+              if (!res.ok) throw new Error('Gagal logout');
+              window.location.href = '/';
+            })
+            .catch(error => console.error('Error:', error));
+        }
+      });
     });
 
     document.getElementById('addDoctorForm').addEventListener('submit', function(e) {
@@ -348,13 +360,34 @@
     });
 
     function deleteDoctor(id) {
-      fetch(`/doctors/${id}`, { method: 'DELETE' })
-        .then(res => {
-          if (!res.ok) throw new Error('Gagal menghapus dokter');
-          loadDoctors();
-        })
-        .catch(error => console.error('Error:', error));
+      Swal.fire({
+        title: 'Hapus Dokter?',
+        text: 'Apakah Anda yakin ingin menghapus dokter ini?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Tidak',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(`/doctors/${id}`, { method: 'DELETE' })
+            .then(res => {
+              if (!res.ok) throw new Error('Gagal menghapus dokter');
+              loadDoctors();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+      });
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('doctorList').addEventListener('click', function(event) {
+        if (event.target && event.target.classList.contains('deleteDoctorButton')) {
+          const doctorId = event.target.getAttribute('data-id');
+          deleteDoctor(doctorId);
+        }
+      });
+    });
 
     loadDoctors();
   </script>

@@ -5,6 +5,8 @@ const { initWhatsAppBot } = require('./bot');
 const path = require('path');
 const session = require('express-session');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 require('dotenv').config();
 
@@ -17,12 +19,32 @@ const db = new sqlite3.Database('./db.sqlite');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static('public'));
+app.use('/gambar', express.static(path.join(__dirname, 'public/gambar')));
+
 
 app.use(session({
     secret: randomHex,
     resave: false,
     saveUninitialized: true
   }));
+
+app.use(helmet());
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+    styleSrc: ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+  }
+}));
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 menit
+    max: 13, // Maksimum 13 percakapan
+    message: "Terlalu banyak permintaan, coba lagi nanti. tunggu 15 menit."
+  });
+  
+  app.use(limiter);
+  
 
 function isAuthenticated(req, res, next) {
     if (req.session.user) {
@@ -124,7 +146,7 @@ app.post('/register', (req, res) => {
           console.log('Gagal mendaftarkan pengguna:', err.message);
           return res.status(400).json({ status: 'error', message: 'Username already exists' });
         }
-        console.log('Pengguna berhasil didaftarkan:', username, " Dengan password". password);
+        console.log('Pengguna berhasil didaftarkan:', username);
         req.session.user = { id: this.lastID, name, role: 'patient', username };
         res.json({ status: 'success' });
       });
@@ -165,6 +187,21 @@ app.get('/get-user', isAuthenticated || isUser, (req, res) => {
         if (err) return res.status(500).json({ error: 'Database error' });
         if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
         res.json(rows);
+    });
+  });
+
+  // get all photo from public/gambar
+  app.get('/images', (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    const directoryPath = path.join(__dirname, 'public/gambar');
+
+    fs.readdir(directoryPath, (err, files) => {
+      if (err) {
+        return res.status(500).json({ error: 'Unable to scan directory: ' + err });
+      }
+      const images = files.map(file => path.join('/gambar', file));
+      res.json(images);
     });
   });
   

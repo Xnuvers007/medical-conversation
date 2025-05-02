@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Patient Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js" async></script>
   <style>
     :root {
       --primary-color: #4a6fdc;
@@ -220,10 +220,10 @@
 </head>
 <body>
   <div class="container">
-    <h2>Booking Konsultasi</h2>
+    <h2>Pemesanan Konsultasi</h2>
     <div id="doctorList" class="doctor-list"></div>
     <textarea id="message" placeholder="Tulis keluhan Anda" required></textarea>
-    <button id="logoutButton" type="button">Logout</button>
+    <button id="logoutButton" type="button">Keluar</button>
   </div>
 
   <script>
@@ -254,10 +254,22 @@ textarea.addEventListener('input', function () {
     });
 
     document.getElementById('logoutButton').addEventListener('click', function() {
-      fetch('/logout', { method: 'POST' })
-        .then(() => {
-          window.location.href = '/';
-        });
+      Swal.fire({
+        title: 'Keluar?',
+        text: 'Apakah Anda yakin ingin keluar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Keluar',
+        cancelButtonText: 'Tidak',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch('/logout', { method: 'POST' })
+            .then(() => {
+              window.location.href = '/';
+            });
+        }
+      });
     });
 
 function sanitizeInput(input) {
