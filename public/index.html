@@ -4,18 +4,195 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
-  <link rel="stylesheet" href="style.css">
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #4a6fdc;
+      --primary-dark: #3a5fc6;
+      --secondary-color: #6c757d;
+      --light-color: #f8f9fa;
+      --dark-color: #343a40;
+      --border-radius: 8px;
+      --box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, #f5f7fb 0%, #e4e8f0 100%);
+      color: #333;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-image: url('data:image/svg+xml;charset=utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%234a6fdc" fill-opacity="0.05" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
+      background-position: bottom;
+      background-repeat: no-repeat;
+      background-size: 100%;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 400px;
+      width: 100%;
+      padding: 40px;
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(90deg, var(--primary-color), #8ca9ff);
+    }
+    
+    h2 {
+      color: var(--dark-color);
+      margin-bottom: 30px;
+      font-size: 28px;
+      font-weight: 600;
+      text-align: center;
+    }
+    
+    #authForm {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    input[type="text"],
+    input[type="password"] {
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+      transition: var(--transition);
+      width: 100%;
+    }
+    
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(74, 111, 220, 0.2);
+      outline: none;
+    }
+    
+    input[type="text"]::placeholder,
+    input[type="password"]::placeholder {
+      color: #aaa;
+    }
+    
+    button[type="submit"] {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 15px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      width: 100%;
+    }
+    
+    button[type="submit"]:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(74, 111, 220, 0.3);
+    }
+    
+    button[type="submit"]:active {
+      transform: translateY(0);
+    }
+    
+    p {
+      text-align: center;
+      margin-top: 15px;
+      color: var(--secondary-color);
+      font-size: 15px;
+    }
+    
+    a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    
+    a:hover {
+      color: var(--primary-dark);
+      text-decoration: underline;
+    }
+    
+    /* Responsive */
+    @media (max-width: 480px) {
+      .container {
+        padding: 30px 20px;
+      }
+      
+      h2 {
+        font-size: 24px;
+      }
+      
+      input[type="text"],
+      input[type="password"],
+      button[type="submit"] {
+        padding: 12px;
+      }
+    }
+    
+    /* Custom SweetAlert2 styles */
+    .swal2-popup {
+      border-radius: 12px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .swal2-title {
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    .swal2-styled.swal2-confirm {
+      background-color: var(--primary-color);
+      border-radius: 6px;
+      padding: 12px 24px;
+    }
+    
+    .swal2-styled.swal2-confirm:focus {
+      box-shadow: 0 0 0 3px rgba(74, 111, 220, 0.3);
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h2>Login / Register</h2>
     <form id="authForm">
-      <input type="text" id="username" placeholder="Username" required>
+      <input type="text" id="username" placeholder="Username Ex: 62xxx" required>
       <input type="password" id="password" placeholder="Password" required>
       <button type="submit">Login</button>
       <p>Don't have an account? <a href="/register.html">Register here</a></p>
     </form>
   </div>
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
+  <!-- check form -->
+   <script>
+    // jika form login kosong dan button login di klik, munculkan alert
+    
+   </script>
 </body>
 </html>
