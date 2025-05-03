@@ -7,10 +7,10 @@ const session = require('express-session');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const { body, validationResult } = require('express-validator');
 
 require('dotenv').config();
 
-// random hex string
 const randomHex = crypto.randomBytes(16).toString('hex');
 
 const app = express();
@@ -25,7 +25,12 @@ app.use('/gambar', express.static(path.join(__dirname, 'public/gambar')));
 app.use(session({
     secret: randomHex,
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
+    cookie: { secure: true,
+        maxAge: 1000 * 60 * 60 * 24, // 1 day
+        sameSite: 'strict',
+        httpOnly: true,
+    }
   }));
 
 app.use(helmet());
@@ -34,13 +39,16 @@ app.use(helmet.contentSecurityPolicy({
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
     styleSrc: ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+    imgSrc: ["'self'", "*"],
   }
 }));
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 menit
     max: 13, // Maksimum 13 percakapan
-    message: "Terlalu banyak permintaan, coba lagi nanti. tunggu 15 menit."
+    message: "Terlalu banyak permintaan, coba lagi nanti. tunggu 15 menit.",
+    standardHeaders: true,
+    legacyHeaders: false,
   });
   
   app.use(limiter);
@@ -66,6 +74,8 @@ function isUser(req, res, next) {
     }
     res.status(403).json({ error: 'Unauthorized - Users only' });
 }
+
+app.set('trust proxy', 1);
 
 // === Setup Database ===
 db.serialize(() => {
@@ -113,6 +123,20 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
+app.use((err, req, res, next) => {
+  console.error(err);  // Log error for debugging
+  res.status(500).json({ message: 'Internal Server Error' });
+});
+
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (req.protocol === 'http') {
+      return res.redirect(301, 'https://' + req.headers.host + req.url);
+    }
+    next();
+  });
+}
+
 app.post('/book', isAuthenticated, (req, res) => {
   if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
   const { user_id, doctor_id, message } = req.body;
@@ -136,7 +160,11 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
   
 
 // Register route
-app.post('/register', (req, res) => {
+app.post('/register', [
+  body('username').isAlphanumeric().withMessage('Username must be alphanumeric'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('email').isEmail().withMessage('Please provide a valid email address'),
+], (req, res) => {
     const { username, password, name } = req.body;
     console.log(`Mencoba mendaftarkan pengguna baru: ${username}`);
   
