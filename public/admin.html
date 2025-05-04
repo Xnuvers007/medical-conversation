@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.5/purify.min.js" integrity="sha512-/CUtA84sWWqWEBejNrrtWa7Yc4cth3Ome2ymvCKOo9YcZ4sh98tndUy4LutE2xGcAgD4fyz16y+gSyJdGCB5ww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <title>Admin Dashboard</title>
   <style>
@@ -244,6 +245,41 @@
         margin-bottom: 10px;
       }
     }
+
+    .deleteUserButton {
+  background-color: #dc3545; /* Warna merah */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.deleteUserButton:hover {
+  background-color: #c82333; /* Warna merah gelap */
+}
+    .deleteUserButton:before {
+      content: '🗑️'; /* Emoji tempat sampah */
+      margin-right: 5px;
+    }
+
+    .deleteUserButton:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.5);
+    }
+
+    .deleteUserButton:active {
+      transform: scale(0.95);
+    }
+    .deleteUserButton:disabled {
+      background-color: #ccc; /* Warna abu-abu saat dinonaktifkan */
+      cursor: not-allowed;
+    }
+    .deleteUserButton:disabled:hover {
+      background-color: #ccc; /* Tidak ada perubahan warna saat dinonaktifkan */
+    }
   </style>
 </head>
 <body>
@@ -258,12 +294,85 @@
     </form>
 
     <button id="logoutButton" type="button">Keluar</button>
+    <br />
+    <button id="lihatLogsButton" type="button">Lihat Logs</button>
+    <button id="deleteLogsButton" type="button">Hapus Semua Log</button>
 
     <h3>Daftar Dokter</h3>
     <ul id="doctorList"></ul>
+    <br />
+    <h3>Daftar Pengguna</h3>
+    <ul id="userList"></ul>
   </div>
 
   <script async>
+
+document.getElementById('deleteLogsButton').addEventListener('click', function () {
+  Swal.fire({
+    title: 'Hapus Semua Log?',
+    text: 'Apakah Anda yakin ingin menghapus semua log aktivitas? Tindakan ini tidak dapat dibatalkan.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Tidak',
+    reverseButtons: true
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch('/admin/logs', { method: 'DELETE' })
+        .then(res => {
+          if (!res.ok) throw new Error('Gagal menghapus log');
+          Swal.fire({
+            icon: 'success',
+            title: 'Log Dihapus',
+            text: 'Semua log aktivitas berhasil dihapus.',
+          }).then(() => {
+            // Refresh halaman atau lakukan tindakan lain jika diperlukan
+            location.reload();
+          });
+        })
+        .catch(error => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal Menghapus Log',
+            text: 'Terjadi kesalahan saat menghapus log. Silakan coba lagi.',
+          });
+          console.error('Error:', error);
+        });
+    }
+  });
+});
+
+document.getElementById('lihatLogsButton').addEventListener('click', function () {
+  fetch('/admin/logs')
+    .then(res => {
+      if (!res.ok) throw new Error('Gagal memuat log');
+      return res.json();
+    })
+    .then(data => {
+      let logsContent = '<h3>Log Aktivitas</h3><ul>';
+      data.forEach(log => {
+        logsContent += `<li>${log.timestamp} - ${log.action} by ${log.username}</li>`;
+      });
+      logsContent += '</ul>';
+      Swal.fire({
+        title: 'Log Aktivitas',
+        html: logsContent,
+        width: 600,
+        showCloseButton: true,
+        focusConfirm: false,
+        confirmButtonText: 'Tutup',
+      });
+    })
+    .catch(error => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Memuat Log',
+        text: 'Terjadi kesalahan saat memuat log. Silakan coba lagi.',
+      });
+      console.error('Error:', error);
+    });
+    });
+
     // Periksa semua form jika valid
     document.querySelectorAll('form').forEach(form => {
       form.addEventListener('submit', function(e) {
@@ -387,6 +496,52 @@
           deleteDoctor(doctorId);
         }
       });
+      fetch('/admin/users')
+      .then(res => res.json())
+      .then(users => {
+        const userList = document.getElementById('userList');
+        userList.innerHTML = '';
+
+        users.forEach(user => {
+          const userItem = document.createElement('li');
+          userItem.innerHTML = `
+            <span>${user.name} (${user.username}) - Role: ${user.role}</span>
+            <button class="deleteUserButton" data-id="${user.id}">Hapus</button>
+          `;
+          userList.appendChild(userItem);
+        });
+      })
+      .catch(error => console.error('Error:', error));
+      document.getElementById('userList').addEventListener('click', function (event) {
+    if (event.target.classList.contains('deleteUserButton')) {
+      const userId = event.target.getAttribute('data-id');
+
+      Swal.fire({
+        title: 'Hapus Pengguna?',
+        text: 'Apakah Anda yakin ingin menghapus pengguna ini? Tindakan ini tidak dapat dibatalkan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Tidak'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(`/admin/users/${userId}`, { method: 'DELETE' })
+            .then(res => {
+              if (!res.ok) throw new Error('Gagal menghapus pengguna');
+              Swal.fire('Berhasil', 'Pengguna berhasil dihapus', 'success');
+              // Perbarui daftar pengguna
+              event.target.parentElement.remove();
+            })
+            .catch(error => Swal.fire('Gagal', 'Gagal menghapus pengguna', 'error'));
+        }
+      });
+    }
+  });
+    document.getElementById('userList').addEventListener('click', function (event) {
+      if (event.target && event.target.classList.contains('deleteUserButton')) {
+        const userId = event.target.getAttribute('data-id');
+        deleteUser(userId);
+      }});
     });
 
     loadDoctors();

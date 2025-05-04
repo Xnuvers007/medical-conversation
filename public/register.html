@@ -6,6 +6,7 @@
   <title>Pendaftaran</title>
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.5/purify.min.js" integrity="sha512-/CUtA84sWWqWEBejNrrtWa7Yc4cth3Ome2ymvCKOo9YcZ4sh98tndUy4LutE2xGcAgD4fyz16y+gSyJdGCB5ww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
     :root {
       --primary-color: #4a6fdc;
@@ -190,9 +191,9 @@
     <h2>Pendaftaran</h2>
     <form id="registerForm">
       <input type="text" id="name" placeholder="Full Name" required>
-      <input type="text" id="username" placeholder="Phone Number (62xxx)" required>
+      <input type="text" id="username" maxlength="15" pattern="^62[0-9]{8,}$" placeholder="Phone Number (62xxx)" required>
       <span class="helper-text">Format: 628xxxxxxxxxx</span>
-      <input type="password" id="password" placeholder="Password" required>
+      <input type="password" id="password" minlength="8" placeholder="Password" required>
       <button type="submit">Daftar</button>
     </form>
     <p>Sudah punya akun ? <a href="/">Masuk</a></p>
@@ -227,11 +228,23 @@
         return; // Jangan lanjut jika username tidak valid
       }
 
+      let sanitizedUsername = username.replace(/[<>'"]/g, ''); 
+      let sanitizedPassword = password.replace(/[<>'"]/g, '');
+      let sanitizedName = name.replace(/[<>'"]/g, '');
+
+      sanitizedUsername = DOMPurify.sanitize(sanitizedUsername);
+      sanitizedPassword = DOMPurify.sanitize(sanitizedPassword);
+      sanitizedName = DOMPurify.sanitize(sanitizedName);
+
       // Jika semua validasi lolos, lanjutkan dengan pengiriman form
       fetch('/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, username, password })
+        body: JSON.stringify({ 
+          name: sanitizedName,
+          username: sanitizedUsername,
+          password: sanitizedPassword
+        })
       })
       .then(res => res.json())
       .then(data => {
