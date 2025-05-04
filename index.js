@@ -160,11 +160,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
   
 
 // Register route
-app.post('/register', [
-  body('username').isAlphanumeric().withMessage('Username must be alphanumeric'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('email').isEmail().withMessage('Please provide a valid email address'),
-], (req, res) => {
+app.post('/register', (req, res) => {
     const { username, password, name } = req.body;
     console.log(`Mencoba mendaftarkan pengguna baru: ${username}`);
   
