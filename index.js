@@ -37,7 +37,7 @@ app.use(helmet());
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+    scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
     styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
     imgSrc: ["'self'", "*"],
     scriptSrcAttr: ["'none'"],
@@ -47,7 +47,7 @@ app.use(helmet.contentSecurityPolicy({
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 menit
-    max: 13, // Maksimum 13 percakapan
+    max: 20, // Maksimum 13 percakapan
     message: "Terlalu banyak permintaan, coba lagi nanti. tunggu 15 menit.",
     standardHeaders: true,
     legacyHeaders: false,
@@ -118,7 +118,29 @@ db.serialize(() => {
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(booking_id) REFERENCES bookings(id)
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS user_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    action TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+  )`);
 });
+
+function logUserActivity(userId, action) {
+  db.run(
+    `INSERT INTO user_logs (user_id, action) VALUES (?, ?)`,
+    [userId, action],
+    (err) => {
+      if (err) {
+        console.error('Gagal menyimpan log aktivitas pengguna:', err);
+      } else {
+        console.log(`Log aktivitas pengguna disimpan: User ID ${userId}, Action: ${action}`);
+      }
+    }
+  );
+}
 
 // === Routes ===
 app.get('/', (req, res) => {
@@ -194,11 +216,17 @@ app.post('/register', [
     }
   
     db.get(`SELECT * FROM users WHERE username = ? AND password = ?`, [username, password], (err, user) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+  
       if (user) {
-        req.session.user = { id: user.id, name: user.name, role: user.role, username: user.username };
+        req.session.user = { id: user.id, username: user.username, role: user.role };
+        logUserActivity(user.id, 'login');
         res.json({ status: 'success', role: user.role });
       } else {
-        res.status(401).json({ status: 'error', message: 'Invalid credentials' });
+        res.status(401).json({ error: 'Invalid credentials' });
       }
     });
   });
@@ -250,7 +278,75 @@ app.get('/get-user', isAuthenticated || isUser, (req, res) => {
         res.json({ status: 'success' });
       });
   });
+
+  app.delete('/users/:id', isAuthenticated && isUser, (req, res) => {
+    const userId = req.params.id;
   
+    // Pastikan hanya pengguna terautentikasi yang dapat menghapus akun mereka sendiri
+    if (req.session.user.id !== parseInt(userId)) {
+      return res.status(403).json({ error: 'Unauthorized - Cannot delete other user accounts' });
+    }
+  
+    console.log('Session during account deletion:', req.session);
+
+    db.run(`DELETE FROM users WHERE id = ?`, [userId], function (err) {
+      if (err) {
+        console.error('Error deleting user:', err);
+        if (req.session && req.session.user && req.session.user.id) {
+          logUserActivity(req.session.user.id, 'delete_account_failed');
+        }
+        return res.status(500).json({ error: 'Gagal menghapus akun pengguna' });
+      }
+    
+      if (req.session && req.session.user && req.session.user.id) {
+        logUserActivity(req.session.user.id, 'delete_account');
+      } else {
+        console.log('User ID tidak ditemukan dalam sesi saat penghapusan akun.');
+      }
+    
+      req.session.destroy(); // Akhiri sesi setelah penghapusan
+      res.json({ status: 'success', message: 'Akun berhasil dihapus' });
+    });
+  });
+
+  // Hapus akun pengguna (admin only)
+app.delete('/admin/users/:id', isAuthenticated && isAdmin, (req, res) => {
+  const userId = req.params.id;
+
+  db.run(`DELETE FROM users WHERE id = ?`, [userId], function (err) {
+    if (err) {
+      console.error('Error deleting user:', err);
+      return res.status(500).json({ error: 'Gagal menghapus akun pengguna' });
+    }
+    console.log(`Akun dengan ID ${userId} berhasil dihapus oleh admin.`);
+    logUserActivity(`${userId}`, 'delete_account_by_admin');
+    res.json({ status: 'success', message: `Akun dengan ID ${userId} berhasil dihapus` });
+  });
+});
+
+// Mendapatkan daftar semua pengguna (admin only)
+app.get('/admin/users', isAuthenticated && isAdmin, (req, res) => {
+  db.all(`SELECT id, username, name, role FROM users`, (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Gagal mendapatkan daftar pengguna' });
+    }
+    res.json(rows);
+  });
+});
+
+  // app.delete('/users/:id', (req, res) => {
+  //   const userId = req.params.id;
+  
+  //   db.run(`DELETE FROM users WHERE id = ?`, [userId], function (err) {
+  //     if (err) {
+  //       console.error('Error deleting user:', err);
+  //       return res.status(500).json({ status: 'error', message: 'Gagal menghapus akun' });
+  //     }
+  
+  //     res.json({ status: 'success', message: 'Akun berhasil dihapus' });
+  //   });
+  // });
+
   // Delete doctor (admin only)
   app.delete('/doctors/:id', isAuthenticated && isAdmin, (req, res) => {
     if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
@@ -262,14 +358,47 @@ app.get('/get-user', isAuthenticated || isUser, (req, res) => {
   });
 
   app.post('/logout', (req, res) => {
+    console.log('Session before logout:', req.session);
+  
+    if (req.session && req.session.user && req.session.user.id) {
+      logUserActivity(req.session.user.id, 'logout');
+      console.log(`User ${req.session.user.username} logged out successfully.`);
+    } else {
+      console.log('User ID tidak ditemukan dalam sesi saat logout.');
+    }
+  
     req.session.destroy((err) => {
       if (err) {
-        return res.status(500).json({ error: 'Failed to logout' });
+        return res.status(500).json({ error: 'Gagal logout' });
       }
       res.json({ status: 'success', message: 'Logged out successfully' });
     });
   });
+
+  app.get('/admin/logs', isAuthenticated && isAdmin, (req, res) => {
+    db.all(`SELECT l.id, u.username, l.action, l.timestamp
+            FROM user_logs l
+            JOIN users u ON l.user_id = u.id
+            ORDER BY l.timestamp DESC`, [], (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Gagal mengambil log aktivitas' });
+      }
+      res.json(rows);
+    });
+  });
+
+  app.delete('/admin/logs', isAuthenticated && isAdmin, (req, res) => {
+    db.run(`DELETE FROM user_logs`, [], function (err) {
+      if (err) {
+        console.error('Error deleting logs:', err);
+        return res.status(500).json({ error: 'Gagal menghapus log aktivitas' });
+      }
   
+      console.log('Semua log aktivitas berhasil dihapus oleh admin.');
+      res.json({ status: 'success', message: 'Semua log aktivitas berhasil dihapus' });
+    });
+  });
+
 
 initWhatsAppBot(db);
 
