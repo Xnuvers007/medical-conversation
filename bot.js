@@ -149,7 +149,20 @@ async function initWhatsAppBot(db) {
           return;
         }
 
-        const listText = rows.map((r, i) => `${i + 1}. ${r.username} (mulai ${r.created_at})`).join("\n");
+        // const listText = rows.map((r, i) => `${i + 1}. ${r.username} (mulai ${r.created_at})`).join("\n");
+        const listText = rows.map((r, i) => {
+          const createdAt = new Date(r.created_at);
+          createdAt.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }); // Menetapkan zona waktu WIB
+          const hari = createdAt.getDate().toString().padStart(2, '0');
+          const bulan = (createdAt.getMonth() + 1).toString().padStart(2, '0');
+          const tahun = createdAt.getFullYear();
+          const jam = createdAt.getHours().toString().padStart(2, '0');
+          const menit = createdAt.getMinutes().toString().padStart(2, '0');
+          const detik = createdAt.getSeconds().toString().padStart(2, '0');
+    
+          return `${i + 1}. ${r.username} (mulai ${hari}/${bulan}/${tahun}, ${jam}.${menit}.${detik} WIB)`;
+        }).join("\n");    
+        
         await sock.sendMessage(sender, { text: `Pasien aktif saat ini:\n\n${listText}` });
       });
       return;

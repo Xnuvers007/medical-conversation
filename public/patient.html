@@ -236,8 +236,9 @@ textarea.addEventListener('input', function () {
 });
 
     let test = 'L2RvY3RvcnM=';
-    // Load dokter
-    fetch(atob(test))
+    document.addEventListener('DOMContentLoaded', function() {
+  // Load doctors
+  fetch(atob(test))
     .then(res => res.json())
     .then(data => {
       const list = document.getElementById('doctorList');
@@ -247,38 +248,50 @@ textarea.addEventListener('input', function () {
         doctorItem.innerHTML = `
           <img src="${doc.photo_url}" alt="${doc.name}">
           <span>${doc.name}<span class="doctor-specialty">${doc.specialization}</span></span>
-          <button onclick="sendMessageToDoctor(${doc.id})">Pilih Dokter</button>
         `;
+        const button = document.createElement('button');
+        button.textContent = 'Pilih Dokter';
+        button.addEventListener('click', () => sendMessageToDoctor(doc.id));
+        doctorItem.appendChild(button);
         list.appendChild(doctorItem);
       });
     });
 
-    document.getElementById('logoutButton').addEventListener('click', function() {
-      Swal.fire({
-        title: 'Keluar?',
-        text: 'Apakah Anda yakin ingin keluar?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Ya, Keluar',
-        cancelButtonText: 'Tidak',
-        reverseButtons: true
-      }).then((result) => {
-        if (result.isConfirmed) {
-          fetch('/logout', { method: 'POST' })
-            .then(() => {
-              window.location.href = '/';
-            });
-        }
-      });
+  // Textarea auto-resize
+  const textarea = document.getElementById('message');
+  textarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+  });
+
+  // Logout button
+  document.getElementById('logoutButton').addEventListener('click', function() {
+    Swal.fire({
+      title: 'Keluar?',
+      text: 'Apakah Anda yakin ingin keluar?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Keluar',
+      cancelButtonText: 'Tidak',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        fetch('/logout', { method: 'POST' })
+          .then(() => {
+            window.location.href = '/';
+          });
+      }
     });
+  });
+});
 
 function sanitizeInput(input) {
-  return input.replace(/[<>:'"]/g, ''); // Hapus karakter berbahaya
+  return input.replace(/[<>:'"]/g, '');
 }
 
 function sendMessageToDoctor(doctor_id) {
   let message = document.getElementById('message').value.trim();
-  message = sanitizeInput(message); // Sanitasi input
+  message = sanitizeInput(message);
 
   if (!message) {
     Swal.fire({
@@ -305,7 +318,7 @@ function sendMessageToDoctor(doctor_id) {
               title: 'Pesan Terkirim',
               text: 'Keluhan Anda telah dikirim ke dokter.',
             }).then(() => {
-              document.getElementById('message').value = ''; // Reset textarea
+              document.getElementById('message').value = '';
             });
           } else {
             Swal.fire({
