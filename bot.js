@@ -3,6 +3,7 @@ const fs = require('fs');
 const pino = require('pino');
 const readline = require('readline');
 const path = require('path');
+const qrcode = require('qrcode');
 
 const activeSessions = {};
 
@@ -10,6 +11,14 @@ const activeSessions = {};
 const mediaDir = path.join(__dirname, 'media');
 if (!fs.existsSync(mediaDir)) {
   fs.mkdirSync(mediaDir, { recursive: true });
+}
+
+function removeAuthFolder() {
+  const authDir = path.join(__dirname, 'auth');
+  if (fs.existsSync(authDir)) {
+    fs.rmSync(authDir, { recursive: true, force: true });
+    console.log('Folder "auth" telah dihapus. Silakan lakukan login ulang.');
+  }
 }
 
 async function initWhatsAppBot(db) {
@@ -22,8 +31,9 @@ async function initWhatsAppBot(db) {
 
   if (!state.creds.me) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question('Login dengan pairing code? (y/n): ', answer => {
-      if (answer.toLowerCase() === 'y') {
+    rl.question('Login dengan pairing code atau QR code? (p/q): ', async (answer) => {
+      if (answer.toLowerCase() === 'p') {
+        // Pairing code flow
         rl.question('Masukkan nomor WhatsApp (contoh: 628123456789): ', async (waNumber) => {
           if (/^\d+$/.test(waNumber.trim()) && waNumber.startsWith('62')) {
             const code = await sock.requestPairingCode(waNumber.trim());
@@ -35,8 +45,34 @@ async function initWhatsAppBot(db) {
             process.exit(1);
           }
         });
-      } else {
+      } else if (answer.toLowerCase() === 'q') {
+        // QR code flow
+        sock.ev.on('connection.update', async (update) => {
+          const { connection, lastDisconnect, qr } = update;
+          if (qr) {
+            // Cetak QR Code ke terminal
+            console.log('QR Code sudah dibuat, silakan pindai dengan WhatsApp Anda:');
+            console.log(await qrcode.toString(qr, { type: 'terminal', scale: 5 }));
+          }
+
+          if (connection === 'close') {
+            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            if (shouldReconnect) {
+              removeAuthFolder();
+              initWhatsAppBot(db);
+            }
+            else {
+              console.log('Sesi logout. Hapus folder "auth" untuk login ulang.');
+            }
+          } else if (connection === 'open') {
+            console.log('Terhubung ke WhatsApp');
+          }
+        });
         rl.close();
+      } else {
+        console.log('Pilihan tidak valid. Harap pilih "p" untuk Pairing Code atau "q" untuk QR Code.');
+        rl.close();
+        process.exit(1);
       }
     });
   }
@@ -45,14 +81,20 @@ async function initWhatsAppBot(db) {
     const { connection, lastDisconnect } = update;
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      if (shouldReconnect) initWhatsAppBot(db);
-      else console.log('Sesi logout. Hapus folder "auth" untuk login ulang.');
+      if (shouldReconnect) {
+        removeAuthFolder();
+        initWhatsAppBot(db);
+      }
+      else {
+        console.log('Sesi logout. Hapus folder "auth" untuk login ulang.');
+      }
     } else if (connection === 'open') {
       console.log('Terhubung ke WhatsApp');
     }
   });
 
   sock.ev.on('creds.update', saveCreds);
+
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
