@@ -8,6 +8,8 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const { body, validationResult } = require('express-validator');
+const chalk = require('chalk');
+const fs = require('fs');
 
 require('dotenv').config();
 
@@ -26,7 +28,8 @@ app.use(session({
     secret: randomHex,
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: true,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
         maxAge: 1000 * 60 * 60 * 24, // 1 day
         sameSite: 'strict',
         httpOnly: true,
@@ -161,15 +164,32 @@ app.use((err, req, res, next) => {
 //   });
 // }
 
+app.get('/bookings', isAuthenticated, (req, res) => {
+  const { user_id, is_active } = req.query;
+  db.all(`SELECT * FROM bookings WHERE user_id = ? AND is_active = ?`, [user_id, is_active], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows);
+  });
+});
+
 app.post('/book', isAuthenticated, (req, res) => {
   if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
   const { user_id, doctor_id, message } = req.body;
-  db.run(`INSERT INTO bookings (user_id, doctor_id, message) VALUES (?, ?, ?)`,
-    [user_id, doctor_id, message],
-    function (err) {
-      if (err) return res.status(500).send('Database error');
-      return res.json({ status: 'success', booking_id: this.lastID });
-    });
+
+  // Periksa apakah pengguna sudah memiliki booking aktif
+  db.get(`SELECT * FROM bookings WHERE user_id = ? AND is_active = 1`, [user_id], (err, existingBooking) => {
+    if (err) return res.status(500).send('Database error');
+    if (existingBooking) {
+      return res.status(400).json({ status: 'error', message: 'Anda sudah memiliki konsultasi aktif dengan dokter lain.' });
+    }
+
+    db.run(`INSERT INTO bookings (user_id, doctor_id, message) VALUES (?, ?, ?)`,
+      [user_id, doctor_id, message],
+      function (err) {
+        if (err) return res.status(500).send('Database error');
+        return res.json({ status: 'success', booking_id: this.lastID });
+      });
+  });
 });
 
 app.get('/dashboard', isAuthenticated, (req, res) => {
@@ -404,4 +424,26 @@ initWhatsAppBot(db);
 
 app.listen(3000, () => {
   console.log(`Server started on http://localhost:3000`);
+  console.log(chalk.yellow('Jika ingin mengganti sesi, silahkan hapus folder auth dan jika ingin menghapus semua data, silahkan hapus db.sqlite'));
+  const authDir = path.join(__dirname, 'auth');
+  
+  if (fs.existsSync(authDir)) {
+    const files = fs.readdirSync(authDir);
+    
+    // Jika folder auth kosong, atau hanya berisi file creds.json
+    if (files.length === 0 || (files.length === 1 && files[0] === 'creds.json')) {
+      fs.rm(authDir, { recursive: true, force: true }, (err) => {
+        if (err) {
+          console.error(chalk.red('Gagal menghapus folder "auth":', err));
+          return;
+        }
+      });
+      console.log(chalk.red('Folder "auth" telah dihapus. Silakan login ulang.'));
+    } else if (files.length > 1) {
+      // Jika folder auth berisi banyak file, jangan hapus folder
+      console.log(chalk.green('Folder "auth" berisi banyak file. Folder tidak dihapus.'));
+    } else {
+      console.log(chalk.green('Folder "auth" kosong. Silakan login ulang.'));
+    }
+  }
 });

@@ -1,0 +1,46 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE PowerDesigner SYSTEM "pdm.dtd">
+<PowerDesigner>
+  <Model name="Medical Consultation System">
+    <Entities>
+      <Entity name="Users">
+        <Attribute name="id" type="INTEGER" primaryKey="true"/>
+        <Attribute name="name" type="TEXT"/>
+        <Attribute name="role" type="TEXT"/>
+        <Attribute name="username" type="TEXT" unique="true"/>
+        <Attribute name="password" type="TEXT"/>
+      </Entity>
+      <Entity name="Doctors">
+        <Attribute name="id" type="INTEGER" primaryKey="true"/>
+        <Attribute name="name" type="TEXT"/>
+        <Attribute name="specialization" type="TEXT"/>
+        <Attribute name="phone" type="TEXT"/>
+        <Attribute name="photo_url" type="TEXT"/>
+      </Entity>
+      <Entity name="Bookings">
+        <Attribute name="id" type="INTEGER" primaryKey="true"/>
+        <Attribute name="user_id" type="INTEGER" foreignKey="Users.id"/>
+        <Attribute name="doctor_id" type="INTEGER" foreignKey="Doctors.id"/>
+        <Attribute name="message" type="TEXT"/>
+        <Attribute name="created_at" type="DATETIME"/>
+        <Attribute name="is_active" type="BOOLEAN"/>
+      </Entity>
+      <Entity name="Messages">
+        <Attribute name="id" type="INTEGER" primaryKey="true"/>
+        <Attribute name="booking_id" type="INTEGER" foreignKey="Bookings.id"/>
+        <Attribute name="sender" type="TEXT"/>
+        <Attribute name="message" type="TEXT"/>
+        <Attribute name="msg_id" type="TEXT"/>
+        <Attribute name="has_media" type="BOOLEAN"/>
+        <Attribute name="timestamp" type="DATETIME"/>
+      </Entity>
+      <Entity name="UserLogs">
+        <Attribute name="id" type="INTEGER" primaryKey="true"/>
+        <Attribute name="user_id" type="INTEGER" foreignKey="Users.id"/>
+        <Attribute name="action" type="TEXT"/>
+        <Attribute name="timestamp" type="DATETIME"/>
+      </Entity>
+    </Entities>
+  </Model>
+</PowerDesigner>

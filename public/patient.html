@@ -373,38 +373,53 @@ function sendMessageToDoctor(doctor_id) {
     return;
   }
 
-  fetch('/get-user', { method: 'GET' })
+  fetch('/get-user')
     .then(res => res.json())
     .then(user => {
-      fetch('/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: user.id, doctor_id, message })
-      })
+      // Tambahkan logika untuk memeriksa booking aktif
+      fetch(`/bookings?user_id=${user.id}&is_active=1`)
         .then(res => res.json())
-        .then(data => {
-          if (data.status === 'success') {
-            Swal.fire({
-              icon: 'success',
-              title: 'Pesan Terkirim',
-              text: 'Keluhan Anda telah dikirim ke dokter.',
-            }).then(() => {
-              document.getElementById('message').value = '';
-            });
-          } else {
+        .then(bookings => {
+          if (bookings.length > 0) {
             Swal.fire({
               icon: 'error',
-              title: 'Gagal Mengirim',
-              text: data.message || 'Terjadi kesalahan saat mengirim keluhan.',
+              title: 'Booking Aktif',
+              text: 'Anda sudah memiliki konsultasi aktif dengan dokter lain.',
             });
+            return;
           }
-        })
-        .catch(() => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Gagal Mengirim',
-            text: 'Terjadi kesalahan saat menghubungi server.',
-          });
+
+          // Jika tidak ada booking aktif, lanjutkan dengan membuat booking baru
+          fetch('/book', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: user.id, doctor_id, message })
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.status === 'success') {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Pesan Terkirim',
+                  text: 'Keluhan Anda telah dikirim ke dokter.',
+                }).then(() => {
+                  document.getElementById('message').value = '';
+                });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Gagal Mengirim',
+                  text: data.message || 'Terjadi kesalahan saat mengirim keluhan.',
+                });
+              }
+            })
+            .catch(() => {
+              Swal.fire({
+                icon: 'error',
+                title: 'Gagal Mengirim',
+                text: 'Terjadi kesalahan saat menghubungi server.',
+              });
+            });
         });
     });
 }

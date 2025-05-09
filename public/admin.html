@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" oncontextmenu="return false;">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -246,40 +246,70 @@
       }
     }
 
-    .deleteUserButton {
-  background-color: #dc3545; /* Warna merah */
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 5px 10px;
+/* Gaya untuk daftar pengguna */
+#userList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#userList li {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 15px;
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  border: 1px solid #eee;
+  transition: var(--transition);
+}
+
+#userList li:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+#userList li img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 15px;
+  border: 2px solid #f0f0f0;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--dark-color);
+}
+
+.user-role {
+  color: var(--secondary-color);
   font-size: 14px;
+  display: block;
+  margin-top: 3px;
+}
+
+.deleteUserButton {
+  background-color: var(--danger-color);
+  color: white;
+  padding: 8px 15px;
+  font-size: 14px;
+  border: none;
+  border-radius: var(--border-radius);
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: var(--transition);
 }
 
 .deleteUserButton:hover {
-  background-color: #c82333; /* Warna merah gelap */
+  background-color: #c82333;
 }
-    .deleteUserButton:before {
-      content: '🗑️'; /* Emoji tempat sampah */
-      margin-right: 5px;
-    }
-
-    .deleteUserButton:focus {
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.5);
-    }
-
-    .deleteUserButton:active {
-      transform: scale(0.95);
-    }
-    .deleteUserButton:disabled {
-      background-color: #ccc; /* Warna abu-abu saat dinonaktifkan */
-      cursor: not-allowed;
-    }
-    .deleteUserButton:disabled:hover {
-      background-color: #ccc; /* Tidak ada perubahan warna saat dinonaktifkan */
-    }
   </style>
 </head>
 <body>
@@ -497,21 +527,25 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
         }
       });
       fetch('/admin/users')
-      .then(res => res.json())
-      .then(users => {
-        const userList = document.getElementById('userList');
-        userList.innerHTML = '';
+  .then(res => res.json())
+  .then(users => {
+    const userList = document.getElementById('userList');
+    userList.innerHTML = '';
 
-        users.forEach(user => {
-          const userItem = document.createElement('li');
-          userItem.innerHTML = `
-            <span>${user.name} (${user.username}) - Role: ${user.role}</span>
-            <button class="deleteUserButton" data-id="${user.id}">Hapus</button>
-          `;
-          userList.appendChild(userItem);
-        });
-      })
-      .catch(error => console.error('Error:', error));
+    users.forEach(user => {
+      const userItem = document.createElement('li');
+      userItem.innerHTML = `
+        <img src="https://avatar.iran.liara.run/username?username=${user.name}" alt="${user.name}">
+        <div class="user-info">
+          <span class="user-name">${user.name} (${user.username})</span>
+          <span class="user-role">Role: ${user.role}</span>
+        </div>
+        <button class="deleteUserButton" data-id="${user.id}">Hapus</button>
+      `;
+      userList.appendChild(userItem);
+    });
+  })
+  .catch(error => console.error('Error:', error));
       document.getElementById('userList').addEventListener('click', function (event) {
     if (event.target.classList.contains('deleteUserButton')) {
       const userId = event.target.getAttribute('data-id');
