@@ -26,11 +26,7 @@ app.use(cookieParser());
 
 app.use('/gambar', express.static(path.join(__dirname, 'public/gambar')));
 
-// app.use(express.static('public'));
-app.use('/public', express.static(path.join(__dirname, 'public'), {
-  dotfiles: 'ignore', // Abaikan file tersembunyi
-  index: false,       // Jangan izinkan akses ke index file
-}));
+app.use(express.static('public'));
 // app.use('/gambar', express.static(path.join(__dirname, 'public/gambar')));
 
 
@@ -63,7 +59,7 @@ app.use(csrfProtection);
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 menit
-    max: 20, // Maksimum 13 percakapan
+    max: 35, // Maksimum 13 percakapan
     message: "Terlalu banyak permintaan, coba lagi nanti. tunggu 15 menit.",
     standardHeaders: true,
     legacyHeaders: false,
@@ -111,7 +107,8 @@ db.serialize(() => {
     name TEXT,
     specialization TEXT,
     phone TEXT,
-    photo_url TEXT
+    photo_url TEXT,
+    welcome_sent BOOLEAN DEFAULT 0
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS bookings (
@@ -161,35 +158,6 @@ function logUserActivity(userId, action) {
 
 app.get('/csrf-token', (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
-});
-
-app.get('/files/:file', (req, res) => {
-  try {
-    // Sanitize the requested file name
-    const requestedFile = path.basename(req.params.file); // Extract only the file name
-    const safePath = path.join(__dirname, 'public', requestedFile);
-
-    // Validate path to ensure it is within the 'public' directory
-    if (!safePath.startsWith(path.join(__dirname, 'public'))) {
-      return res.status(403).send('Access denied');
-    }
-
-    // Check if the file exists before sending
-    if (!fs.existsSync(safePath)) {
-      return res.status(404).send('File not found');
-    }
-
-    // Send the file if the path is safe
-    res.sendFile(safePath, (err) => {
-      if (err) {
-        console.error('Error sending file:', err);
-        res.status(500).send('Internal Server Error');
-      }
-    });
-  } catch (error) {
-    console.error('Error processing file request:', error);
-    res.status(500).send('Internal Server Error');
-  }
 });
 
 app.use((err, req, res, next) => {

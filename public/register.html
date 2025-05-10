@@ -237,6 +237,15 @@ document.addEventListener('DOMContentLoaded', function () {
         return; // Jangan submit jika ada yang kosong
       }
 
+      if (username.startsWith('0')){
+        username = username.replace(/^0/, '62');
+        Swal.fire({
+          icon: 'info',
+          title: 'Perhatian',
+          text: 'Nomor telepon diawali dengan 0, otomatis diubah menjadi 62.',
+        });
+      }
+
       // Validasi bahwa username hanya berisi angka
       const phoneRegex = /^62[0-9]+$/;
       if (!phoneRegex.test(username)) {

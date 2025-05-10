@@ -11,6 +11,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 const activeSessions = {};
+const logger = pino({ level: 'info' });
 
 const { DEEPSEEKER_API_KEY } = process.env;
 if (!DEEPSEEKER_API_KEY) {
@@ -117,6 +118,7 @@ async function initWhatsAppBot(db) {
   }
     
   sock.ev.on('connection.update', (update) => {
+    logger.info('Connection update:', update);
     const { connection, lastDisconnect } = update;
     let jam = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' });
     let date = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
@@ -143,6 +145,10 @@ async function initWhatsAppBot(db) {
 
   sock.ev.on('creds.update', saveCreds);
 
+  sock.ev.on('*', (event, data) => {
+    console.log(`[${new Date().toLocaleString()}] Event: ${event}`, data);
+  });
+
   const menus = {
     general: [
       { command: '.menu', description: 'Menampilkan menu' },
@@ -167,6 +173,30 @@ async function initWhatsAppBot(db) {
       { command: '.stop', description: 'Mengakhiri sesi konsultasi' },
     ],
   };
+
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    messages.forEach((msg) => {
+      const sender = msg.key.remoteJid;
+      const messageContent = msg.message?.conversation || 
+                             msg.message?.extendedTextMessage?.text || 
+                             '[Media/Unsupported Message]';
+  
+      console.log(`[${new Date().toLocaleString()}] Pesan baru dari ${sender}: ${messageContent}`);
+    });
+  });
+
+  sock.ev.on('presence.update', (update) => {
+    const { id, presences } = update;
+    console.log(`[${new Date().toLocaleString()}] Status pengguna di ${id}:`, presences);
+  });
+
+  sock.ev.on('chats.update', (chats) => {
+    chats.forEach((chat) => {
+      console.log(`[${new Date().toLocaleString()}] Chat diperbarui:`, chat);
+    });
+  });
+
+  /////////////////////////////
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
@@ -212,25 +242,70 @@ async function initWhatsAppBot(db) {
 
   const isFirstMessage = !activeSessions[senderNumber];
 
-if (isFirstMessage) {
-  db.get(`
-      SELECT role, welcome_sent FROM users WHERE phone = ?
-  `, [senderNumber], async (err, user) => {
-      if (err || !user) {
-          await sock.sendMessage(sender, { text: "Selamat datang! Ketik .menu untuk melihat fitur yang tersedia." });
-          db.run(`UPDATE users SET welcome_sent = 1 WHERE phone = ?`, [senderNumber]);
-      } else if (!user.welcome_sent) {
-          if (user.role === 'doctor') {
-              await sock.sendMessage(sender, { text: "Selamat datang Dokter! Ketik .menu untuk melihat fitur yang tersedia." });
-          } else if (user.role === 'patient') {
-              await sock.sendMessage(sender, { text: "Selamat datang Pasien! Ketik .menu untuk melihat fitur yang tersedia. Fitur yang tersedia untuk Anda: .ai dan .gambar." });
+  if (isFirstMessage) {
+      // Periksa di tabel users
+      db.get(`SELECT role, welcome_sent FROM users WHERE username = ?`, [senderNumber], async (err, user) => {
+          if (err) {
+              console.error('Error saat memeriksa tabel users:', err);
+              return;
           }
-
-          // Tandai bahwa pesan selamat datang sudah dikirim
-          db.run(`UPDATE users SET welcome_sent = 1 WHERE phone = ?`, [senderNumber]);
-      }
-  });
-}
+  
+          if (user) {
+              // Jika pengguna ditemukan di tabel users
+              if (user.welcome_sent) {
+                  return; // Jangan kirim pesan lagi jika sudah dikirim
+              }
+  
+              // Kirim pesan selamat datang untuk pengguna
+              await sock.sendMessage(sender, { text: "Selamat datang Pasien! Ketik .menu untuk melihat fitur yang tersedia. Fitur yang tersedia untuk Anda: .ai dan .gambar." });
+  
+              // Tandai bahwa pesan selamat datang sudah dikirim
+              db.run(`UPDATE users SET welcome_sent = 1 WHERE username = ?`, [senderNumber], (err) => {
+                  if (err) {
+                      console.error('Gagal memperbarui status welcome_sent di tabel users:', err);
+                  }
+              });
+  
+              // Tambahkan ke activeSessions
+              activeSessions[senderNumber] = { welcomeSent: true };
+              return;
+          }
+  
+          // Jika tidak ditemukan di tabel users, periksa di tabel doctors
+          db.get(`SELECT 'doctor' AS role, welcome_sent FROM doctors WHERE phone = ?`, [senderNumber], async (err, doctor) => {
+              if (err) {
+                  console.error('Error saat memeriksa tabel doctors:', err);
+                  return;
+              }
+  
+              if (doctor) {
+                  // Jika pengguna ditemukan di tabel doctors
+                  if (doctor.welcome_sent) {
+                      return; // Jangan kirim pesan lagi jika sudah dikirim
+                  }
+  
+                  // Kirim pesan selamat datang untuk dokter
+                  await sock.sendMessage(sender, { text: "Selamat datang Dokter! Ketik .menu untuk melihat fitur yang tersedia." });
+  
+                  // Tandai bahwa pesan selamat datang sudah dikirim
+                  db.run(`UPDATE doctors SET welcome_sent = 1 WHERE phone = ?`, [senderNumber], (err) => {
+                      if (err) {
+                          console.error('Gagal memperbarui status welcome_sent di tabel doctors:', err);
+                      }
+                  });
+  
+                  // Tambahkan ke activeSessions
+                  activeSessions[senderNumber] = { welcomeSent: true };
+                  return;
+              }
+  
+              // Jika pengguna tidak ditemukan di kedua tabel
+              await sock.sendMessage(sender, { text: "Selamat datang! Ketik .menu untuk melihat fitur yang tersedia." });
+              activeSessions[senderNumber] = { welcomeSent: true };
+              return;
+          });
+      });
+  }
 
     // Handle .gambar command
     if (messageContent.toLowerCase() === '.gambar') {
@@ -254,14 +329,20 @@ if (isFirstMessage) {
         
         if (!question.length) {
             console.log("Pesan kosong diterima");
-            await sock.sendMessage(sender, { text: "Teksnya mana?" });
+            await sock.sendMessage(sender, { text: `Teksnya mana?\nContoh: .ai Obat batuk\n.tanyaai Obat batuk` }); // quoted: question || msg || msg.key.id || msg.key.remoteJid || msg.key });
+            return;
         } else {
             const filteredQuestion = `Sebagai asisten dokter, jawab pertanyaan berikut dengan menggunakan pengetahuan medis: ${question}`;
-            await sock.sendMessage(sender, { text: "Silakan tunggu sebentar, saya sedang mencari jawabannya..." });
+            // await sock.sendMessage(sender, { text: "Silakan tunggu sebentar, saya sedang mencari jawabannya..." });
+            const editjawaban = await sock.sendMessage(sender, { text: "Silakan tunggu sebentar, saya sedang mencari jawabannya..." });
+            // await sock.sendMessage(sender, { delete: editjawaban.key }, { text: "Silakan tunggu sebentar, saya sedang mencari jawabannya..." });
             
             // Query AI for the question
             const aiResponse = await queryAI(filteredQuestion);
-            await sock.sendMessage(sender, { text: aiResponse });
+            // await sock.sendMessage(sender, { text: aiResponse });
+            // Edit the previous message with the AI response
+            // await sock.sendMessage(sender, { text: "edited teks", edit: editjawaban.key || editjawaban.key.id || editjawaban });
+            await sock.sendMessage(sender, { text: aiResponse, edit: editjawaban.key || editjawaban.key.id || editjawaban }, { quoted: question });
         }
         return;
     }

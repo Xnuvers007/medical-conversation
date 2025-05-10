@@ -244,13 +244,27 @@
     <h2>Pemesanan Konsultasi</h2>
     <div id="doctorList" class="doctor-list"></div>
     <textarea id="message" placeholder="Tulis keluhan Anda" required></textarea>
+    <input type="hidden" id="csrfToken" name="_csrf" value="">
     <button id="logoutButton" type="button">Keluar</button>
     <button id="deleteAccountButton" type="button">Hapus Akun</button>
   </div>
 
   <script>
 
+document.addEventListener('DOMContentLoaded', function () {
+  fetch('/csrf-token')
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('csrfToken').value = data.csrfToken; // Simpan token ke input tersembunyi
+    })
+    .catch(err => {
+      console.error('Gagal mengambil token CSRF:', err);
+      alert('Gagal memuat token CSRF. Silakan muat ulang halaman.');
+    });
+});
+
 document.getElementById('deleteAccountButton').addEventListener('click', function () {
+  const csrfToken = document.getElementById('csrfToken').value;
   Swal.fire({
     title: 'Hapus Akun?',
     text: 'Apakah Anda yakin ingin menghapus akun ini? Tindakan ini tidak dapat dibatalkan.',
@@ -267,7 +281,13 @@ document.getElementById('deleteAccountButton').addEventListener('click', functio
           const userId = user.id; // Get the logged-in user's ID
 
           // Now proceed with the delete request
-          fetch(`/users/${userId}`, { method: 'DELETE' })
+          fetch(`/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+              'X-CSRF-Token': csrfToken,
+              'CSRF-Token': csrfToken
+            }
+          })
             .then((res) => {
               if (!res.ok) throw new Error('Gagal menghapus akun');
               Swal.fire({
@@ -374,6 +394,8 @@ function sendMessageToDoctor(doctor_id) {
     return;
   }
 
+  const csrfToken = document.getElementById('csrfToken').value;
+
   fetch('/get-user')
     .then(res => res.json())
     .then(user => {
@@ -393,7 +415,11 @@ function sendMessageToDoctor(doctor_id) {
           // Jika tidak ada booking aktif, lanjutkan dengan membuat booking baru
           fetch('/book', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrfToken,
+              'CSRF-Token': csrfToken
+            },
             body: JSON.stringify({ user_id: user.id, doctor_id, message })
           })
             .then(res => res.json())

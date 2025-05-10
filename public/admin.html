@@ -316,6 +316,7 @@
   <div class="container">
     <h2>Kelola Data Dokter</h2>
     <form id="addDoctorForm" novalidate>
+      <input type="hidden" id="csrfToken" name="_csrf" value="">
       <input type="text" id="name" placeholder="Nama Dokter" required>
       <input type="text" id="specialization" placeholder="Spesialisasi" required>
       <input type="text" id="phone" placeholder="Nomor WhatsApp (62xxx)" required>
@@ -337,6 +338,25 @@
 
   <script async>
 
+const csrfToken = document.getElementById('csrfToken').value;
+
+document.addEventListener('DOMContentLoaded', function () {
+    fetch('/csrf-token')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('csrfToken').value = data.csrfToken;
+      })
+      .catch(err => {
+        console.error('Gagal mengambil token CSRF:', err);
+        // alert('Gagal memuat token CSRF. Silakan muat ulang halaman.');
+        Swal.fire({
+          icon: 'error',
+          title: 'Kesalahan',
+          text: 'Gagal memuat token CSRF. Silakan muat ulang halaman.',
+        });
+      });
+  });
+
 document.getElementById('deleteLogsButton').addEventListener('click', function () {
   Swal.fire({
     title: 'Hapus Semua Log?',
@@ -348,7 +368,8 @@ document.getElementById('deleteLogsButton').addEventListener('click', function (
     reverseButtons: true
   }).then((result) => {
     if (result.isConfirmed) {
-      fetch('/admin/logs', { method: 'DELETE' })
+      const csrfToken = document.getElementById('csrfToken').value;
+      fetch('/admin/logs', { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken, 'CSRF-Token': csrfToken } })
         .then(res => {
           if (!res.ok) throw new Error('Gagal menghapus log');
           Swal.fire({
@@ -463,6 +484,7 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
     }
 
     document.getElementById('logoutButton').addEventListener('click', function() {
+      const csrfToken = document.getElementById('csrfToken').value;
       Swal.fire({
         title: 'Keluar?',
         text: 'Apakah Anda yakin ingin keluar?',
@@ -473,7 +495,7 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
         reverseButtons: true
       }).then((result) => {
         if (result.isConfirmed) {
-          fetch('/logout', { method: 'POST' })
+          fetch('/logout', { method: 'POST', headers: { 'X-CSRF-Token': csrfToken, 'CSRF-Token': csrfToken } })
             .then(res => {
               if (!res.ok) throw new Error('Gagal logout');
               window.location.href = '/';
@@ -489,10 +511,15 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
       const specialization = document.getElementById('specialization').value;
       const phone = document.getElementById('phone').value;
       const photo_url = document.getElementById('photo_url').value;
+      const csrfToken = document.getElementById('csrfToken').value;
 
       fetch('/doctors', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          'CSRF-Token': csrfToken
+        },
         body: JSON.stringify({ name, specialization, phone, photo_url })
       })
       .then(res => {
@@ -503,7 +530,50 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
       .catch(error => console.error('Error:', error));
     });
 
+    function deleteUser(userId) {
+  const csrfToken = document.getElementById('csrfToken').value; // Ambil token CSRF
+
+  Swal.fire({
+    title: 'Hapus Pengguna?',
+    text: 'Apakah Anda yakin ingin menghapus pengguna ini? Tindakan ini tidak dapat dibatalkan.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Tidak',
+    reverseButtons: true
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch(`/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken // Sertakan token CSRF di header
+        }
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Gagal menghapus pengguna');
+          Swal.fire({
+            icon: 'success',
+            title: 'Pengguna Dihapus',
+            text: 'Pengguna berhasil dihapus.',
+          }).then(() => {
+            location.reload(); // Muat ulang halaman setelah penghapusan
+          });
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal Menghapus Pengguna',
+            text: 'Terjadi kesalahan saat menghapus pengguna. Silakan coba lagi.',
+          });
+        });
+    }
+  });
+}
+
     function deleteDoctor(id) {
+      const csrfToken = document.getElementById('csrfToken').value;
       Swal.fire({
         title: 'Hapus Dokter?',
         text: 'Apakah Anda yakin ingin menghapus dokter ini?',
@@ -514,7 +584,13 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
         reverseButtons: true
       }).then((result) => {
         if (result.isConfirmed) {
-          fetch(`/doctors/${id}`, { method: 'DELETE' })
+          fetch(`/doctors/${id}`, { 
+            method: 'DELETE',
+            headers: {
+              'X-CSRF-Token': csrfToken,
+              'CSRF-Token': csrfToken
+            }
+          })
             .then(res => {
               if (!res.ok) throw new Error('Gagal menghapus dokter');
               loadDoctors();
@@ -531,7 +607,7 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
           deleteDoctor(doctorId);
         }
       });
-      fetch('/admin/users')
+      fetch('/admin/users', { method: 'GET', headers: { 'X-CSRF-Token': csrfToken, 'CSRF-Token': csrfToken } })
   .then(res => res.json())
   .then(users => {
     const userList = document.getElementById('userList');
@@ -554,6 +630,7 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
       document.getElementById('userList').addEventListener('click', function (event) {
     if (event.target.classList.contains('deleteUserButton')) {
       const userId = event.target.getAttribute('data-id');
+      const csrfToken = document.getElementById('csrfToken').value;
 
       Swal.fire({
         title: 'Hapus Pengguna?',
@@ -564,7 +641,13 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
         cancelButtonText: 'Tidak'
       }).then((result) => {
         if (result.isConfirmed) {
-          fetch(`/admin/users/${userId}`, { method: 'DELETE' })
+          fetch(`/admin/users/${userId}`, { 
+            method: 'DELETE',
+            headers: {
+              'X-CSRF-Token': csrfToken,
+              'CSRF-Token': csrfToken
+            }
+          })
             .then(res => {
               if (!res.ok) throw new Error('Gagal menghapus pengguna');
               Swal.fire('Berhasil', 'Pengguna berhasil dihapus', 'success');
