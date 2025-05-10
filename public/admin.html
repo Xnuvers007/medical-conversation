@@ -615,13 +615,17 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
 
     users.forEach(user => {
       const userItem = document.createElement('li');
+      const SanitizedName = DOMPurify.sanitize(user.name);
+      const SanitizedUsername = DOMPurify.sanitize(user.username);
+      const SanitizedRole = DOMPurify.sanitize(user.role);
+      const SanitizedId = DOMPurify.sanitize(user.id);
       userItem.innerHTML = `
-        <img src="https://avatar.iran.liara.run/username?username=${user.name}" alt="${user.name}">
+        <img src="https://avatar.iran.liara.run/username?username=${SanitizedName}" alt="${SanitizedName}">
         <div class="user-info">
-          <span class="user-name">${user.name} (${user.username})</span>
-          <span class="user-role">Role: ${user.role}</span>
+          <span class="user-name">${SanitizedName} (${SanitizedUsername})</span>
+          <span class="user-role">Role: ${SanitizedRole}</span>
         </div>
-        <button class="deleteUserButton" data-id="${user.id}">Hapus</button>
+        <button class="deleteUserButton" data-id="${SanitizedId}">Hapus</button>
       `;
       userList.appendChild(userItem);
     });
