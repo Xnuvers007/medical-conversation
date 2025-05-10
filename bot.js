@@ -6,7 +6,6 @@ const readline = require('readline');
 const path = require('path');
 const chalk = require('chalk');
 
-const { OpenAI } = require('openai');
 const axios = require('axios');
 
 require('dotenv').config();
@@ -18,12 +17,6 @@ if (!DEEPSEEKER_API_KEY) {
   console.error(chalk.red('DEEPSEEKER_API_KEY is not set in .env file.'));
   process.exit(1);
 }
-
-const client = new OpenAI({
-  baseUrl: "https://openrouter.ai/api/v1",
-  apiKey: DEEPSEEKER_API_KEY,
-});
-
 
 // Create necessary directories if they don't exist
 const mediaDir = path.join(__dirname, 'media');
@@ -79,6 +72,9 @@ async function initWhatsAppBot(db) {
     logger: pino({ level: 'info' }),
     auth: state,
     printQRInTerminal: true,
+    connectTimeoutMs: 60000,
+    defaultQueryTimeoutMs: 60000,
+    timeoutMs: 60000,
   });
 
   if (!state.creds.me) {
@@ -147,6 +143,30 @@ async function initWhatsAppBot(db) {
 
   sock.ev.on('creds.update', saveCreds);
 
+  const menus = {
+    general: [
+      { command: '.menu', description: 'Menampilkan menu' },
+      { command: '.gambar', description: 'Mengirim gambar contoh' },
+      { command: '.ai', description: 'Bertanya kepada AI' },
+      { command: '.tanyaai', description: 'Bertanya kepada AI dengan format lain' },
+    ],
+    doctor: [
+      { command: '.listpasien', description: 'Menampilkan daftar pasien aktif' },
+      { command: '.kirim', description: 'Mengirim pesan ke pasien' },
+      { command: '.lanjut', description: 'Melanjutkan sesi konsultasi dengan pasien' },
+      { command: '.akhiri', description: 'Mengakhiri sesi konsultasi' },
+      { command: '.stop', description: 'Mengakhiri sesi konsultasi' },
+      { command: '.ai', description: 'Bertanya kepada AI' },
+      { command: '.tanyaai', description: 'Bertanya kepada AI dengan format lain' },
+    ],
+    patient: [
+      { command: '.ai', description: 'Bertanya kepada AI' },
+      { command: '.tanyaai', description: 'Bertanya kepada AI dengan format lain' },
+      { command: '.gambar', description: 'Mengirim gambar contoh' },
+      { command: '.akhiri', description: 'Mengakhiri sesi konsultasi' },
+      { command: '.stop', description: 'Mengakhiri sesi konsultasi' },
+    ],
+  };
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
@@ -170,6 +190,47 @@ async function initWhatsAppBot(db) {
                        msg.message.videoMessage || 
                        msg.message.documentMessage || 
                        msg.message.audioMessage);
+
+  //   const isFirstMessage = !activeSessions[senderNumber];
+    
+  //   if (isFirstMessage) {
+  //     db.get(`
+  //         SELECT role FROM users WHERE phone = ?
+  //     `, [senderNumber], async (err, user) => {
+  //         if (err || !user) {
+  //             await sock.sendMessage(sender, { text: "Selamat datang! Ketik .menu untuk melihat fitur yang tersedia." });
+  //             return;
+  //         }
+
+  //         if (user.role === 'doctor') {
+  //             await sock.sendMessage(sender, { text: "Selamat datang Dokter! Ketik .menu untuk melihat fitur yang tersedia." });
+  //         } else if (user.role === 'patient') {
+  //             await sock.sendMessage(sender, { text: "Selamat datang Pasien! Ketik .menu untuk melihat fitur yang tersedia. Fitur yang tersedia untuk Anda: .ai dan .gambar." });
+  //         }
+  //     });
+  // }
+
+  const isFirstMessage = !activeSessions[senderNumber];
+
+if (isFirstMessage) {
+  db.get(`
+      SELECT role, welcome_sent FROM users WHERE phone = ?
+  `, [senderNumber], async (err, user) => {
+      if (err || !user) {
+          await sock.sendMessage(sender, { text: "Selamat datang! Ketik .menu untuk melihat fitur yang tersedia." });
+          db.run(`UPDATE users SET welcome_sent = 1 WHERE phone = ?`, [senderNumber]);
+      } else if (!user.welcome_sent) {
+          if (user.role === 'doctor') {
+              await sock.sendMessage(sender, { text: "Selamat datang Dokter! Ketik .menu untuk melihat fitur yang tersedia." });
+          } else if (user.role === 'patient') {
+              await sock.sendMessage(sender, { text: "Selamat datang Pasien! Ketik .menu untuk melihat fitur yang tersedia. Fitur yang tersedia untuk Anda: .ai dan .gambar." });
+          }
+
+          // Tandai bahwa pesan selamat datang sudah dikirim
+          db.run(`UPDATE users SET welcome_sent = 1 WHERE phone = ?`, [senderNumber]);
+      }
+  });
+}
 
     // Handle .gambar command
     if (messageContent.toLowerCase() === '.gambar') {
@@ -204,6 +265,77 @@ async function initWhatsAppBot(db) {
         }
         return;
     }
+
+    if (messageContent.toLowerCase() === '.menu') {
+      try {
+          // Ekstrak nomor telepon dari sender JID
+          const senderJid = msg.key.remoteJid;
+          const senderNumber = senderJid.split('@')[0];
+          
+          // Periksa apakah nomor telepon valid
+          if (!/^\+?[1-9]\d{1,14}$/.test(senderNumber.replace('whatsapp:', ''))) {
+              await sock.sendMessage(senderJid, { text: "Nomor telepon tidak valid." });
+              return;
+          }
+  
+          let menuText = "Menu:\n\n";
+  
+          // Periksa pengguna di database
+          const userQuery = `SELECT id, username, role FROM users WHERE username = ?`;
+          const doctorQuery = `SELECT id, phone FROM doctors WHERE phone = ?`;
+  
+          // Cek di users tabel
+          db.get(userQuery, [senderNumber], async (err, user) => {
+              if (err) {
+                  console.error('Error saat memeriksa pengguna:', err);
+                  await sock.sendMessage(senderJid, { text: 'Terjadi kesalahan saat memeriksa pengguna.' });
+                  return;
+              }
+  
+              if (user) {
+                  // Pengguna terdaftar di users, tampilkan menu pasien
+                  menuText += "Anda terdaftar sebagai: Pasien\n\n";
+                  menus.patient.forEach(item => {
+                      menuText += `${item.command} - ${item.description}\n`;
+                  });
+                  await sock.sendMessage(senderJid, { text: menuText });
+                  return;
+              }
+  
+              // Cek di doctors tabel
+              db.get(doctorQuery, [senderNumber], async (err, doctor) => {
+                  if (err) {
+                      console.error('Error saat memeriksa dokter:', err);
+                      await sock.sendMessage(senderJid, { text: 'Terjadi kesalahan saat memeriksa dokter.' });
+                      return;
+                  }
+  
+                  if (doctor) {
+                      // Dokter terdaftar, tampilkan menu dokter
+                      menuText += "Anda terdaftar sebagai: Dokter\n\n";
+                      menus.doctor.forEach(item => {
+                          menuText += `${item.command} - ${item.description}\n`;
+                      });
+                      await sock.sendMessage(senderJid, { text: menuText });
+                      return;
+                  }
+  
+              if (!user && !doctor) {
+                  // Pengguna tidak terdaftar, tampilkan menu umum
+                  menuText += "Anda tidak terdaftar dan Anda adalah pengguna umum. Silakan daftar untuk menggunakan layanan kami.\n\n";
+                  menus.general.forEach(item => {
+                      menuText += `${item.command} - ${item.description}\n`;
+                  });
+                  await sock.sendMessage(senderJid, { text: menuText });
+                  return;
+              }
+              });
+          });
+      } catch (error) {
+          console.error('Error saat menampilkan menu:', error);
+          await sock.sendMessage(sender, { text: 'Terjadi kesalahan saat menampilkan menu.' });
+      }
+  }
 
     // Handle .kirim
     if (messageContent.startsWith(".kirim ")) {
@@ -246,28 +378,26 @@ async function initWhatsAppBot(db) {
     }
 
     // Handle .listpasien
-    if (messageContent.toLowerCase() === ".listpasien") {
-      const dokterPhone = senderNumber;
-      db.all(`
-        SELECT u.username, b.created_at
-        FROM bookings b
-        JOIN users u ON b.user_id = u.id
-        JOIN doctors d ON b.doctor_id = d.id
-        WHERE d.phone = ? AND b.is_active = 1
-        ORDER BY b.created_at DESC
-      `, [dokterPhone], async (err, rows) => {
-        if (err) {
-          await sock.sendMessage(sender, { text: "Gagal mengambil daftar pasien aktif." });
+// Handle .listpasien
+if (messageContent.toLowerCase() === ".listpasien") {
+  const dokterPhone = senderNumber;
+  db.all(`SELECT u.username, b.created_at, b.is_active
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      JOIN doctors d ON b.doctor_id = d.id
+      WHERE d.phone = ?
+      ORDER BY b.created_at DESC`, [dokterPhone], async (err, rows) => {
+      if (err) {
+          await sock.sendMessage(sender, { text: "Gagal mengambil daftar pasien." });
           return;
-        }
+      }
 
-        if (rows.length === 0) {
-          await sock.sendMessage(sender, { text: "Tidak ada pasien yang sedang aktif konsultasi." });
+      if (rows.length === 0) {
+          await sock.sendMessage(sender, { text: "Tidak ada pasien yang sedang konsultasi." });
           return;
-        }
+      }
 
-        // const listText = rows.map((r, i) => `${i + 1}. ${r.username} (mulai ${r.created_at})`).join("\n");
-        const listText = rows.map((r, i) => {
+      const listText = rows.map((r, i) => {
           const createdAt = new Date(r.created_at);
           createdAt.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }); // Menetapkan zona waktu WIB
           const hari = createdAt.getDate().toString().padStart(2, '0');
@@ -276,17 +406,26 @@ async function initWhatsAppBot(db) {
           const jam = createdAt.getHours().toString().padStart(2, '0');
           const menit = createdAt.getMinutes().toString().padStart(2, '0');
           const detik = createdAt.getSeconds().toString().padStart(2, '0');
-    
-          return `${i + 1}. ${r.username} (mulai ${hari}/${bulan}/${tahun}, ${jam}.${menit}.${detik} WIB)`;
-        }).join("\n");    
-        
-        await sock.sendMessage(sender, { text: `Pasien aktif saat ini:\n\n${listText}` });
-      });
-      return;
-    }
+          const aktif = r.is_active ? "Aktif" : "Tidak Aktif";
+          
+          return `${i + 1}. ${r.username} (mulai ${hari}/${bulan}/${tahun}, ${jam}.${menit}.${detik} WIB) - Status: ${aktif}`;
+      }).join("\n");    
+      
+      await sock.sendMessage(sender, { text: `Daftar pasien:\n\n${listText}` });
+  });
+  return;
+}
 
     // Handle .lanjut dan simpan sesi aktif
     if (messageContent.toLowerCase().startsWith(".lanjut")) {
+      if (!activeSessions[senderNumber]) {
+        await sock.sendMessage(sender, { text: "Tidak ada sesi aktif untuk dilanjutkan." });
+        return;
+      }
+      if (!messageContent.includes(" ")) {
+        await sock.sendMessage(sender, { text: "Format salah. Gunakan: .lanjut 62xxx" });
+        return;
+      }
       const dokterPhone = senderNumber;
       const parts = messageContent.split(" ");
       const username = parts[1];

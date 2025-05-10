@@ -443,13 +443,18 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
           list.innerHTML = '';
           data.forEach(doc => {
             const item = document.createElement('li');
+            const SanitizedName = DOMPurify.sanitize(doc.name);
+            const SanitizedSpec = DOMPurify.sanitize(doc.specialization);
+            const SanitizedPhone = DOMPurify.sanitize(doc.phone);
+            const SanitizedPhotoUrl = DOMPurify.sanitize(doc.photo_url);
+            const SanitizedId = DOMPurify.sanitize(doc.id);
             item.innerHTML = `
-              <img src="${doc.photo_url}" alt="${doc.name}">
+              <img src="${SanitizedPhotoUrl}" alt="${SanitizedName}">
               <div class="doctor-info">
-                <span class="doctor-name">${doc.name}</span>
-                <span class="doctor-spec">${doc.specialization} • WA: ${doc.phone}</span>
+                <span class="doctor-name">${SanitizedName}</span>
+                <span class="doctor-spec">${SanitizedSpec} • WA: ${SanitizedPhone}</span>
               </div>
-              <button class="deleteDoctorButton" data-id="${doc.id}">Hapus</button>
+              <button class="deleteDoctorButton" data-id="${SanitizedId}">Hapus</button>
             `;
             list.appendChild(item);
           });

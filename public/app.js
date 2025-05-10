@@ -1,8 +1,21 @@
+document.addEventListener('DOMContentLoaded', function () {
+    fetch('/csrf-token')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('csrfToken').value = data.csrfToken;
+      })
+      .catch(err => {
+        console.error('Gagal mengambil token CSRF:', err);
+        alert('Gagal memuat token CSRF. Silakan muat ulang halaman.');
+      });
+  });
+
 document.getElementById('authForm').addEventListener('submit', function(e) {
     e.preventDefault();
   
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
+    const csrfToken = document.getElementById('csrfToken').value;
   
     if (!username || !password) {
         Swal.fire({
@@ -32,7 +45,11 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
   
     fetch('/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken,
+            'CSRF-Token': csrfToken
+        },
         body: JSON.stringify({ username: sanitizedUsername, password: sanitizedPassword })
     })
     .then(response => response.json())

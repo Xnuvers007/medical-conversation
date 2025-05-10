@@ -316,9 +316,10 @@ textarea.addEventListener('input', function () {
       data.forEach(doc => {
         const doctorItem = document.createElement('div');
         doctorItem.className = 'doctor-item';
+        const { name, specialization, photo_url } = doc;
         doctorItem.innerHTML = `
-          <img src="${doc.photo_url}" alt="${doc.name}">
-          <span>${doc.name}<span class="doctor-specialty">${doc.specialization}</span></span>
+          <img src="${photo_url}" alt="${name}">
+          <span>${name}<span class="doctor-specialty">${specialization}</span></span>
         `;
         const button = document.createElement('button');
         button.textContent = 'Pilih Dokter';

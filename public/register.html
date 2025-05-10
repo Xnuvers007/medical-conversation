@@ -191,6 +191,7 @@
   <div class="container">
     <h2>Pendaftaran</h2>
     <form id="registerForm">
+      <input type="hidden" id="csrfToken" name="_csrf" value="">
       <input type="text" id="name" placeholder="Full Name" required>
       <input type="text" id="username" maxlength="15" pattern="^62[0-9]{8,}$" placeholder="Phone Number (62xxx)" required>
       <span class="helper-text">Format: 628xxxxxxxxxx</span>
@@ -201,12 +202,30 @@
   </div>
   
   <script nonce="{{ nonce }}">
+
+document.addEventListener('DOMContentLoaded', function () {
+  fetch('/csrf-token')
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('csrfToken').value = data.csrfToken;
+    })
+    .catch(err => {
+      console.error('Gagal mengambil token CSRF:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Kesalahan',
+        text: 'Gagal memuat token CSRF. Silakan muat ulang halaman.',
+      });
+    });
+});
+
     document.getElementById('registerForm').addEventListener('submit', function(e) {
       e.preventDefault();
 
       const name = document.getElementById('name').value.trim();
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value.trim();
+      const csrfToken = document.getElementById('csrfToken').value;
 
       // Validasi jika ada field yang kosong
       if (name === '' || username === '' || password === '') {
@@ -240,7 +259,11 @@
       // Jika semua validasi lolos, lanjutkan dengan pengiriman form
       fetch('/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          'CSRF-Token': csrfToken
+        },
         body: JSON.stringify({ 
           name: sanitizedName,
           username: sanitizedUsername,

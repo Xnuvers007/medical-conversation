@@ -10,6 +10,8 @@ const helmet = require('helmet');
 const { body, validationResult } = require('express-validator');
 const chalk = require('chalk');
 const fs = require('fs');
+const csrf = require('csurf');
+const cookieParser = require('cookie-parser');
 
 require('dotenv').config();
 
@@ -20,8 +22,16 @@ const db = new sqlite3.Database('./db.sqlite');
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(express.static('public'));
+app.use(cookieParser());
+
 app.use('/gambar', express.static(path.join(__dirname, 'public/gambar')));
+
+// app.use(express.static('public'));
+app.use('/public', express.static(path.join(__dirname, 'public'), {
+  dotfiles: 'ignore', // Abaikan file tersembunyi
+  index: false,       // Jangan izinkan akses ke index file
+}));
+// app.use('/gambar', express.static(path.join(__dirname, 'public/gambar')));
 
 
 app.use(session({
@@ -47,6 +57,9 @@ app.use(helmet.contentSecurityPolicy({
     styleSrcAttr: ["'none'"],
   }
 }));
+
+const csrfProtection = csrf({ cookie: true });
+app.use(csrfProtection);
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 menit
@@ -89,7 +102,8 @@ db.serialize(() => {
     name TEXT,
     role TEXT CHECK(role IN ('admin', 'patient')),
     username TEXT UNIQUE,
-    password TEXT
+    password TEXT,
+    welcome_sent BOOLEAN DEFAULT 0
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS doctors (
@@ -144,6 +158,48 @@ function logUserActivity(userId, action) {
     }
   );
 }
+
+app.get('/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
+
+app.get('/files/:file', (req, res) => {
+  try {
+    // Sanitize the requested file name
+    const requestedFile = path.basename(req.params.file); // Extract only the file name
+    const safePath = path.join(__dirname, 'public', requestedFile);
+
+    // Validate path to ensure it is within the 'public' directory
+    if (!safePath.startsWith(path.join(__dirname, 'public'))) {
+      return res.status(403).send('Access denied');
+    }
+
+    // Check if the file exists before sending
+    if (!fs.existsSync(safePath)) {
+      return res.status(404).send('File not found');
+    }
+
+    // Send the file if the path is safe
+    res.sendFile(safePath, (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+  } catch (error) {
+    console.error('Error processing file request:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    // Token CSRF tidak valid
+    res.status(403).json({ error: 'Invalid CSRF token' });
+  } else {
+    next(err);
+  }
+});
 
 // === Routes ===
 app.get('/', (req, res) => {
