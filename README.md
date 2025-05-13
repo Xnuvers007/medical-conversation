@@ -59,7 +59,7 @@
 git clone https://github.com/Xnuvers007/medical-conversation.git
 
 # Navigate to the project directory
-cd whatsapp-ai-doctor-bot
+cd medical-conversation
 
 # Install dependencies
 npm install
