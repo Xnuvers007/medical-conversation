@@ -20,7 +20,7 @@
   "description": "Conversation from patient to doctor and doctor to patient. This is a medical conversation chatbot that simulates a conversation between a patient and a doctor. It uses the OpenAI API to generate responses based on the input provided by the user. The chatbot can be used for educational purposes, to practice medical conversations, or to get information about medical conditions and treatments.",
   "dependencies": {
     "axios": "^1.9.0",
-    "baileys": "^6.7.16",
+    "baileys": "^6.7.18",
     "body-parser": "^2.2.0",
     "chalk": "^4.1.2",
     "cookie": "^1.0.2",

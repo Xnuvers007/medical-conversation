@@ -35,7 +35,8 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        // secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' ? true : false,
         maxAge: 1000 * 60 * 60 * 24, // 1 day
         sameSite: 'strict',
         httpOnly: true,
@@ -231,7 +232,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
 app.post('/register', [
   body('username').isAlphanumeric().withMessage('Username must be alphanumeric'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('email').isEmail().withMessage('Please provide a valid email address'),
+  body('name').notEmpty().withMessage('Name is required')
 ], (req, res) => {
     const { username, password, name } = req.body;
     console.log(`Mencoba mendaftarkan pengguna baru: ${username}`);

@@ -8,6 +8,7 @@
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.5/purify.min.js" integrity="sha512-/CUtA84sWWqWEBejNrrtWa7Yc4cth3Ome2ymvCKOo9YcZ4sh98tndUy4LutE2xGcAgD4fyz16y+gSyJdGCB5ww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  
   <style>
     :root {
       --primary-color: #4a6fdc;
@@ -219,89 +220,99 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-    document.getElementById('registerForm').addEventListener('submit', function(e) {
-      e.preventDefault();
+document.getElementById('registerForm').addEventListener('submit', function (e) {
+  e.preventDefault();
 
-      const name = document.getElementById('name').value.trim();
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const csrfToken = document.getElementById('csrfToken').value;
+  const name = document.getElementById('name').value.trim();
+  let username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const csrfToken = document.getElementById('csrfToken').value;
 
-      // Validasi jika ada field yang kosong
-      if (name === '' || username === '' || password === '') {
-        Swal.fire({
-          icon: 'error',
-          title: 'Oops...',
-          text: 'Silakan isi semua bidang yang diperlukan dengan benar!',
-        });
-        return; // Jangan submit jika ada yang kosong
-      }
-
-      if (username.startsWith('0')){
-        username = username.replace(/^0/, '62');
-        Swal.fire({
-          icon: 'info',
-          title: 'Perhatian',
-          text: 'Nomor telepon diawali dengan 0, otomatis diubah menjadi 62.',
-        });
-      }
-
-      // Validasi bahwa username hanya berisi angka
-      const phoneRegex = /^62[0-9]+$/;
-      if (!phoneRegex.test(username)) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Invalid Phone Number',
-          text: 'Nomor telepon harus dimulai dengan 62.\nNomor telepon hanya boleh mengandung angka',
-        });
-        return; // Jangan lanjut jika username tidak valid
-      }
-
-      let sanitizedUsername = username.replace(/[<>'"]/g, ''); 
-      let sanitizedPassword = password.replace(/[<>'"]/g, '');
-      let sanitizedName = name.replace(/[<>'"]/g, '');
-
-      sanitizedUsername = DOMPurify.sanitize(sanitizedUsername);
-      sanitizedPassword = DOMPurify.sanitize(sanitizedPassword);
-      sanitizedName = DOMPurify.sanitize(sanitizedName);
-
-      // Jika semua validasi lolos, lanjutkan dengan pengiriman form
-      fetch('/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
-          'CSRF-Token': csrfToken
-        },
-        body: JSON.stringify({ 
-          name: sanitizedName,
-          username: sanitizedUsername,
-          password: sanitizedPassword
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === 'success') {
-          Swal.fire({
-            icon: 'success',
-            title: 'Berhasil',
-            text: 'Anda telah berhasil mendaftar\nUsername: ' + username + '\nPassword: ' + password,
-            confirmButtonText: 'Oke'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              window.location.href = '/';
-            }
-          });
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Gagal',
-            text: data.message || 'Pendaftaran gagal',
-            confirmButtonText: 'Oke'
-          });
-        }
-      });
+  // Validasi jika ada field yang kosong
+  if (name === '' || username === '' || password === '') {
+    Swal.fire({
+      icon: 'error',
+      title: 'Oops...',
+      text: 'Silakan isi semua bidang yang diperlukan dengan benar!',
     });
+    return; // Jangan submit jika ada yang kosong
+  }
+
+  // Validasi jika nomor telepon diawali dengan 0
+  if (username.startsWith('0')) {
+    username = username.replace(/^0/, '62'); // Ubah 0 menjadi 62
+    Swal.fire({
+      icon: 'info',
+      title: 'Perhatian',
+      text: `Nomor telepon diawali dengan 0, otomatis diubah menjadi ${username}.`,
+    }).then(() => {
+      // Lanjutkan proses setelah pengguna menutup peringatan
+      validateAndSubmitForm(name, username, password, csrfToken);
+    });
+    return; // Jangan lanjutkan sebelum peringatan ditutup
+  }
+
+  // Jika nomor telepon tidak diawali dengan 0, langsung lanjutkan proses
+  validateAndSubmitForm(name, username, password, csrfToken);
+});
+
+function validateAndSubmitForm(name, username, password, csrfToken) {
+  // Validasi bahwa username hanya berisi angka
+  const phoneRegex = /^62[0-9]+$/;
+  if (!phoneRegex.test(username)) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Invalid Phone Number',
+      text: 'Nomor telepon harus dimulai dengan 62.\nNomor telepon hanya boleh mengandung angka.',
+    });
+    return; // Jangan lanjut jika username tidak valid
+  }
+
+  let sanitizedUsername = username.replace(/[<>'"]/g, '');
+  let sanitizedPassword = password.replace(/[<>'"]/g, '');
+  let sanitizedName = name.replace(/[<>'"]/g, '');
+
+  sanitizedUsername = DOMPurify.sanitize(sanitizedUsername);
+  sanitizedPassword = DOMPurify.sanitize(sanitizedPassword);
+  sanitizedName = DOMPurify.sanitize(sanitizedName);
+
+  // Jika semua validasi lolos, lanjutkan dengan pengiriman form
+  fetch('/register', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+      'CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify({
+      name: sanitizedName,
+      username: sanitizedUsername,
+      password: sanitizedPassword,
+    }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.status === 'success') {
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: `Anda telah berhasil mendaftar\nUsername: ${username}\nPassword: ${password}`,
+          confirmButtonText: 'Oke',
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = '/';
+          }
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: data.message || 'Pendaftaran gagal',
+          confirmButtonText: 'Oke',
+        });
+      }
+    });
+}
   </script>
 </body>
 </html>
