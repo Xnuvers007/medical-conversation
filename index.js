@@ -63,7 +63,7 @@ app.use(csrfProtection);
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 menit
-    max: 35, // Maksimum 13 percakapan
+    max: 50, // Maksimum 13 percakapan
     message: "Terlalu banyak permintaan, coba lagi nanti. tunggu 15 menit.",
     standardHeaders: true,
     legacyHeaders: false,
@@ -137,6 +137,7 @@ db.serialize(() => {
     message TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT 1,
+    notified_end INTEGER DEFAULT 0,
     FOREIGN KEY(user_id) REFERENCES users(id),
     FOREIGN KEY(doctor_id) REFERENCES doctors(id)
   )`);

@@ -342,7 +342,10 @@ async function initWhatsAppBot(db) {
             // await sock.sendMessage(sender, { text: aiResponse });
             // Edit the previous message with the AI response
             // await sock.sendMessage(sender, { text: "edited teks", edit: editjawaban.key || editjawaban.key.id || editjawaban });
-            await sock.sendMessage(sender, { text: aiResponse, edit: editjawaban.key || editjawaban.key.id || editjawaban }, { quoted: question });
+
+            // await sock.sendMessage(sender, { text: aiResponse, edit: editjawaban.key || editjawaban.key.id || editjawaban }, { quoted: question });
+
+            await sock.sendMessage(sender, { text: aiResponse }, { quoted: editjawaban });
         }
         return;
     }
@@ -458,7 +461,6 @@ async function initWhatsAppBot(db) {
       return;
     }
 
-    // Handle .listpasien
 // Handle .listpasien
 if (messageContent.toLowerCase() === ".listpasien") {
   const dokterPhone = senderNumber;
@@ -499,47 +501,48 @@ if (messageContent.toLowerCase() === ".listpasien") {
 
     // Handle .lanjut dan simpan sesi aktif
     if (messageContent.toLowerCase().startsWith(".lanjut")) {
-      if (!activeSessions[senderNumber]) {
-        await sock.sendMessage(sender, { text: "Tidak ada sesi aktif untuk dilanjutkan." });
-        return;
-      }
-      if (!messageContent.includes(" ")) {
-        await sock.sendMessage(sender, { text: "Format salah. Gunakan: .lanjut 62xxx" });
-        return;
-      }
       const dokterPhone = senderNumber;
-      const parts = messageContent.split(" ");
-      const username = parts[1];
-
-      const sql = `
-        SELECT b.id AS booking_id, u.username, d.phone
-        FROM bookings b
-        JOIN doctors d ON b.doctor_id = d.id
-        JOIN users u ON b.user_id = u.id
-        WHERE d.phone = ? ${username ? "AND u.username = ?" : ""}
-        AND b.is_active = 1
-        ORDER BY b.created_at DESC LIMIT 1
-      `;
-
-      const params = username ? [dokterPhone, username] : [dokterPhone];
-
-      db.get(sql, params, async (err, booking) => {
-        if (err || !booking) {
-          await sock.sendMessage(sender, { text: "Tidak ditemukan pasien aktif untuk dilanjutkan." });
-          return;
+    
+      // Ambil semua pasien aktif untuk dokter ini
+      db.all(
+        `SELECT b.id AS booking_id, u.username, d.phone, b.is_active
+         FROM bookings b
+         JOIN doctors d ON b.doctor_id = d.id
+         JOIN users u ON b.user_id = u.id
+         WHERE d.phone = ? AND b.is_active = 1
+         ORDER BY b.created_at ASC`,
+        [dokterPhone],
+        async (err, rows) => {
+          if (err) {
+            console.error("Error saat mengambil daftar pasien aktif:", err);
+            await sock.sendMessage(sender, { text: "Terjadi kesalahan saat mengambil daftar pasien aktif." });
+            return;
+          }
+    
+          if (rows.length === 0) {
+            await sock.sendMessage(sender, { text: "Tidak ada pasien aktif untuk dilanjutkan." });
+            return;
+          }
+    
+          // Pilih pasien berikutnya berdasarkan sesi aktif
+          const currentSessionIndex = rows.findIndex((r) => r.booking_id === activeSessions[dokterPhone]);
+          const nextSessionIndex = (currentSessionIndex + 1) % rows.length; // Pilih pasien berikutnya secara melingkar
+          const nextSession = rows[nextSessionIndex];
+    
+          // Perbarui sesi aktif
+          activeSessions[dokterPhone] = nextSession.booking_id;
+    
+          // Kirim pesan ke dokter dan pasien
+          await sock.sendMessage(sender, {
+            text: `Sesi dengan pasien ${nextSession.username} telah dilanjutkan. Anda dapat mulai berkonsultasi.`,
+          });
+    
+          await sock.sendMessage(`${nextSession.username}@s.whatsapp.net`, {
+            text: `Dokter telah kembali ke sesi konsultasi dengan Anda. Silakan lanjutkan percakapan.`,
+          });
         }
-
-        activeSessions[dokterPhone] = booking.booking_id;
-
-        await sock.sendMessage(sender, {
-          text: `Sesi dengan pasien ${booking.username} telah dilanjutkan. Anda dapat mulai berkonsultasi.`
-        });
-
-        await sock.sendMessage(`${booking.username}@s.whatsapp.net`, {
-          text: `Dokter telah kembali ke sesi konsultasi dengan Anda. Silakan lanjutkan percakapan.`
-        });
-      });
-
+      );
+    
       return;
     }
 
@@ -581,13 +584,23 @@ if (messageContent.toLowerCase() === ".listpasien") {
       } else return;
 
       if (!booking.is_active) {
-        await sock.sendMessage(sender, {
-          text: "Sesi konsultasi telah berakhir. Silakan buat booking baru di website untuk melanjutkan."
-        });
+        // Periksa apakah pesan sudah dikirim sebelumnya
+        if (booking.notified_end === 0) {
+          await sock.sendMessage(sender, {
+            text: "Sesi konsultasi telah berakhir. Silakan buat booking baru di website untuk melanjutkan."
+          });
+      
+          // Tandai bahwa pesan telah dikirim
+          db.run(`UPDATE bookings SET notified_end = 1 WHERE id = ?`, [booking.booking_id], (err) => {
+            if (err) {
+              console.error("Gagal memperbarui status notified_end:", err);
+            }
+          });
+        }
         return;
       }
 
-      if (["akhiri", "stop"].includes(messageContent.toLowerCase())) {
+      if (["akhiri", "stop",".akhiri", ".stop"].includes(messageContent.toLowerCase())) {
         db.run(`UPDATE bookings SET is_active = 0 WHERE id = ?`, [booking.booking_id]);
         delete activeSessions[booking.phone]; // Reset sesi aktif jika sesi diakhiri
         await sock.sendMessage(dokterJid, { text: "Percakapan telah diakhiri. Silakan ke website untuk konsultasi kembali." });
@@ -786,9 +799,19 @@ async function handleForwardMedia(sock, db, sender, senderNumber, mediaType, med
     }
 
     if (!booking.is_active) {
-      await sock.sendMessage(sender, {
-        text: "Sesi konsultasi telah berakhir. Silakan buat booking baru di website untuk melanjutkan."
-      });
+      // Periksa apakah pesan sudah dikirim sebelumnya
+      if (booking.notified_end === 0) {
+        await sock.sendMessage(sender, {
+          text: "Sesi konsultasi telah berakhir. Silakan buat booking baru di website untuk melanjutkan."
+        });
+    
+        // Tandai bahwa pesan telah dikirim
+        db.run(`UPDATE bookings SET notified_end = 1 WHERE id = ?`, [booking.booking_id], (err) => {
+          if (err) {
+            console.error("Gagal memperbarui status notified_end:", err);
+          }
+        });
+      }
       return;
     }
 
