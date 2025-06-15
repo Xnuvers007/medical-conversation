@@ -45,216 +45,278 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.5/purify.min.js" integrity="sha512-/CUtA84sWWqWEBejNrrtWa7Yc4cth3Ome2ymvCKOo9YcZ4sh98tndUy4LutE2xGcAgD4fyz16y+gSyJdGCB5ww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
-
-  .site-footer {
-    margin-top: 40px;
-    width: 100%;
-    text-align: center;
-    position: relative;
-    padding: 20px 0 15px;
-    overflow: hidden;
-  }
-  
-  .footer-wave {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 120px;
-    overflow: hidden;
-    z-index: -1;
-  }
-  
-  .footer-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    position: relative;
-    z-index: 1;
-  }
-  
-  .footer-logo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: var(--primary-color);
-    font-size: 16px;
-  }
-  
-  .medical-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--primary-color);
-    color: white;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    margin-right: 8px;
-    box-shadow: 0 2px 5px rgba(74, 111, 220, 0.3);
-  }
-  
-  .site-footer p {
-    color: var(--secondary-color);
-    font-size: 14px;
-    margin: 0;
-    position: relative;
-    padding-top: 12px;
-  }
-  
-  .site-footer p:before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 40px;
-    height: 2px;
-    background: linear-gradient(90deg, rgba(74, 111, 220, 0.5), rgba(140, 169, 255, 0.5));
-    border-radius: 2px;
-  }
-  
-  @media (max-width: 480px) {
-    .site-footer {
-      margin-top: 30px;
-      padding: 15px 0 12px;
-    }
-    
-    .footer-logo {
-      font-size: 14px;
-    }
-    
-    .medical-icon {
-      width: 24px;
-      height: 24px;
-    }
-  }
-
+    /* Import Google Fonts for medical/professional look */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
 
     :root {
-      --primary-color: #4a6fdc;
-      --primary-dark: #3a5fc6;
-      --secondary-color: #6c757d;
-      --light-color: #f8f9fa;
-      --dark-color: #343a40;
-      --border-radius: 8px;
-      --box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-      --transition: all 0.3s ease;
+      /* Medical color palette - calming and trustworthy */
+      --primary-color: #2E86AB;
+      --primary-light: #A8DADC;
+      --primary-dark: #1D5F7A;
+      --secondary-color: #457B9D;
+      --accent-color: #F1FAEE;
+      --success-color: #2D9964;
+      --warning-color: #E76F51;
+      --text-primary: #1D3557;
+      --text-secondary: #6C7B7F;
+      --text-light: #8E9AAF;
+      --background-primary: #FEFEFE;
+      --background-secondary: #F8F9FA;
+      --background-gradient: linear-gradient(135deg, #F1FAEE 0%, #A8DADC 100%);
+      --border-color: #E1E8ED;
+      --shadow-light: 0 2px 12px rgba(45, 134, 171, 0.08);
+      --shadow-medium: 0 8px 32px rgba(45, 134, 171, 0.12);
+      --shadow-heavy: 0 20px 60px rgba(45, 134, 171, 0.15);
+      --border-radius: 16px;
+      --border-radius-small: 8px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     
     body {
-      background: linear-gradient(135deg, #f5f7fb 0%, #e4e8f0 100%);
-      color: #333;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--background-gradient);
+      color: var(--text-primary);
       line-height: 1.6;
       min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      background-image: url('data:image/svg+xml;charset=utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%234a6fdc" fill-opacity="0.05" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
-      background-position: bottom;
-      background-repeat: no-repeat;
-      background-size: 100%;
       padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Medical background pattern */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(46, 134, 171, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(168, 218, 220, 0.04) 0%, transparent 50%),
+        url('data:image/svg+xml;charset=utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Cg fill="%232E86AB" fill-opacity="0.02"%3E%3Cpath d="M50 10 L55 25 L70 25 L58.5 35 L63.5 50 L50 42.5 L36.5 50 L41.5 35 L30 25 L45 25 Z"/%3E%3C/g%3E%3C/svg%3E');
+      background-size: 400px 400px, 300px 300px, 60px 60px;
+      background-position: 0% 0%, 100% 100%, 50% 50%;
+      animation: float 20s ease-in-out infinite;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-10px) rotate(1deg); }
     }
     
     .container {
-      max-width: 400px;
+      max-width: 420px;
       width: 100%;
-      padding: 40px;
-      background-color: white;
+      background: var(--background-primary);
       border-radius: var(--border-radius);
-      box-shadow: var(--box-shadow);
+      box-shadow: var(--shadow-heavy);
       position: relative;
       overflow: hidden;
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
-    
+
+    /* Medical header with pulse animation */
     .container::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
-      height: 5px;
-      background: linear-gradient(90deg, var(--primary-color), #8ca9ff);
+      height: 6px;
+      background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--primary-light));
+      background-size: 200% 100%;
+      animation: gradientShift 3s ease-in-out infinite;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .container-content {
+      padding: 48px 40px 40px;
+    }
+
+    /* Medical logo section */
+    .logo-section {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .medical-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border-radius: 50%;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-medium);
+      position: relative;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: var(--shadow-medium); }
+      50% { transform: scale(1.05); box-shadow: var(--shadow-heavy); }
+    }
+
+    .medical-logo::after {
+      content: '';
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      background: white;
+      border-radius: 4px;
+      clip-path: polygon(40% 0%, 60% 0%, 60% 40%, 100% 40%, 100% 60%, 60% 60%, 60% 100%, 40% 100%, 40% 60%, 0% 60%, 0% 40%, 40% 40%);
     }
     
     h2 {
-      color: var(--dark-color);
-      margin-bottom: 30px;
+      font-family: 'Poppins', sans-serif;
+      color: var(--text-primary);
       font-size: 28px;
       font-weight: 600;
-      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      font-weight: 400;
+      margin-bottom: 32px;
     }
     
     #authForm {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 24px;
+    }
+
+    .input-group {
+      position: relative;
+    }
+
+    .input-group label {
+      display: block;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      font-size: 14px;
+      letter-spacing: 0.01em;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      transition: var(--transition);
+      z-index: 2;
     }
     
     input[type="text"],
     input[type="password"] {
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: var(--border-radius);
-      font-size: 16px;
-      transition: var(--transition);
       width: 100%;
+      padding: 16px 16px 16px 48px;
+      border: 2px solid var(--border-color);
+      border-radius: var(--border-radius-small);
+      font-size: 16px;
+      font-weight: 400;
+      background: var(--background-primary);
+      color: var(--text-primary);
+      transition: var(--transition);
+      position: relative;
     }
     
     input[type="text"]:focus,
     input[type="password"]:focus {
       border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(74, 111, 220, 0.2);
+      box-shadow: 0 0 0 4px rgba(46, 134, 171, 0.1);
       outline: none;
+      background: white;
+    }
+
+    input[type="text"]:focus + .input-icon,
+    input[type="password"]:focus + .input-icon {
+      color: var(--primary-color);
     }
     
     input[type="text"]::placeholder,
     input[type="password"]::placeholder {
-      color: #aaa;
+      color: var(--text-light);
+      font-weight: 400;
     }
-    
+
+    /* Medical-themed button */
     button[type="submit"] {
-      background-color: var(--primary-color);
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
       color: white;
       border: none;
-      border-radius: var(--border-radius);
-      padding: 15px;
+      border-radius: var(--border-radius-small);
+      padding: 18px 24px;
       font-size: 16px;
       font-weight: 600;
+      font-family: 'Poppins', sans-serif;
       cursor: pointer;
       transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-medium);
+    }
+
+    button[type="submit"]::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
       width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+
+    button[type="submit"]:hover::before {
+      left: 100%;
     }
     
     button[type="submit"]:hover {
-      background-color: var(--primary-dark);
       transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(74, 111, 220, 0.3);
+      box-shadow: var(--shadow-heavy);
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
     }
     
     button[type="submit"]:active {
       transform: translateY(0);
     }
-    
+
+    /* Enhanced link styling */
     p {
       text-align: center;
-      margin-top: 15px;
-      color: var(--secondary-color);
-      font-size: 15px;
+      margin-top: 24px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.5;
     }
     
     a {
@@ -262,74 +324,227 @@
       text-decoration: none;
       font-weight: 600;
       transition: var(--transition);
+      position: relative;
+    }
+
+    a::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--primary-color);
+      transition: width 0.3s ease;
+    }
+
+    a:hover::after {
+      width: 100%;
     }
     
     a:hover {
       color: var(--primary-dark);
-      text-decoration: underline;
+    }
+
+    /* Enhanced footer */
+    .site-footer {
+      margin-top: 32px;
+      padding: 24px 40px 32px;
+      background: linear-gradient(135deg, var(--accent-color), rgba(168, 218, 220, 0.1));
+      border-top: 1px solid var(--border-color);
+      position: relative;
+    }
+
+    .footer-wave {
+      position: absolute;
+      top: -1px;
+      left: 0;
+      width: 100%;
+      height: 20px;
+      overflow: hidden;
+    }
+
+    .footer-wave svg {
+      width: 100%;
+      height: 100%;
     }
     
-    /* Responsive */
+    .footer-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: var(--primary-color);
+      font-size: 16px;
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    .medical-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-right: 12px;
+      box-shadow: var(--shadow-light);
+    }
+    
+    .site-footer p {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin: 0;
+      text-align: center;
+    }
+
+    /* Responsive design */
     @media (max-width: 480px) {
-      .container {
-        padding: 30px 20px;
+      .container-content {
+        padding: 40px 24px 32px;
       }
       
+      .medical-logo {
+        width: 64px;
+        height: 64px;
+      }
+
       h2 {
         font-size: 24px;
       }
+
+      .subtitle {
+        font-size: 14px;
+      }
       
       input[type="text"],
-      input[type="password"],
+      input[type="password"] {
+        padding: 14px 14px 14px 44px;
+        font-size: 16px;
+      }
+
       button[type="submit"] {
-        padding: 12px;
+        padding: 16px 20px;
+      }
+
+      .site-footer {
+        padding: 20px 24px 24px;
+      }
+
+      .footer-logo {
+        font-size: 14px;
+      }
+      
+      .medical-icon {
+        width: 28px;
+        height: 28px;
       }
     }
     
-    /* Custom SweetAlert2 styles */
+    /* Custom SweetAlert2 medical theme */
     .swal2-popup {
-      border-radius: 12px;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      border-radius: var(--border-radius);
+      font-family: 'Inter', sans-serif;
+      box-shadow: var(--shadow-heavy);
     }
     
     .swal2-title {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 600;
+      color: var(--text-primary);
+      font-family: 'Poppins', sans-serif;
     }
     
     .swal2-styled.swal2-confirm {
-      background-color: var(--primary-color);
-      border-radius: 6px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border-radius: var(--border-radius-small);
       padding: 12px 24px;
+      font-weight: 600;
+      box-shadow: var(--shadow-medium);
     }
     
     .swal2-styled.swal2-confirm:focus {
-      box-shadow: 0 0 0 3px rgba(74, 111, 220, 0.3);
+      box-shadow: 0 0 0 4px rgba(46, 134, 171, 0.2);
+    }
+
+    /* Loading animation for medical theme */
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Masuk / Daftar</h2>
-    <form id="authForm">
-      <input type="hidden" id="csrfToken" name="_csrf" value="">
-      <label for="username">Username</label>
-      <input type="text" id="username" maxlength="15" placeholder="Username Ex: 62xxx" required autocomplete="username">
-      <label for="password">Password</label>
-      <input type="password" id="password" minlength="8" placeholder="Password" required autocomplete="current-password">
-      <button type="submit">Masuk</button>
-      <p>Tidak punya akun ? <a href="/register.html">Lakukan pendaftaran akun disini</a></p>
-    </form>
+    <div class="container-content">
+      <div class="logo-section">
+        <div class="medical-logo"></div>
+        <h2>Masuk / Daftar</h2>
+        <p class="subtitle">Akses platform konsultasi medis Anda</p>
+      </div>
+      
+      <form id="authForm">
+        <input type="hidden" id="csrfToken" name="_csrf" value="">
+        
+        <div class="input-group">
+          <label for="username">Username</label>
+          <div class="input-wrapper">
+            <input type="text" id="username" maxlength="15" placeholder="Username Ex: 62xxx" required autocomplete="username">
+            <div class="input-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        <div class="input-group">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <input type="password" id="password" minlength="8" placeholder="Password" required autocomplete="current-password">
+            <div class="input-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <circle cx="12" cy="16" r="1"></circle>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        <button type="submit">Masuk</button>
+        <p>Tidak punya akun ? <a href="/register.html">Lakukan pendaftaran akun disini</a></p>
+      </form>
+    </div>
+    
     <footer class="site-footer">
       <div class="footer-wave">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120">
-          <path fill="#4a6fdc" fill-opacity="0.08" d="M0,32L60,37.3C120,43,240,53,360,69.3C480,85,600,107,720,101.3C840,96,960,64,1080,53.3C1200,43,1320,53,1380,58.7L1440,64L1440,120L1380,120C1320,120,1200,120,1080,120C960,120,840,120,720,120C600,120,480,120,360,120C240,120,120,120,60,120L0,120Z"></path>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 20">
+          <path fill="#2E86AB" fill-opacity="0.1" d="M0,10 C240,5 480,15 720,10 C960,5 1200,15 1440,10 L1440,20 L0,20 Z"></path>
         </svg>
       </div>
       <div class="footer-content">
         <div class="footer-logo">
           <span class="medical-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
             </svg>
           </span>
