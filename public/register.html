@@ -2,9 +2,38 @@
 <html lang="en" oncontextmenu="return false;">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
+
+  <!-- HTML Meta Tags -->
+  <meta name="description" content="Ini adalah halaman untuk pendaftaran pengguna">
+  <meta name="language" content="id">
+  <meta name="author" content="Indra Dwi A">
+  <meta name="keywords" content="Medical,Conversation,MedicalConversation,PercakapanMedikal,Medis,PercakapanMedis">
+  <meta name="robots" content="index, follow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pendaftaran</title>
+
+  <!-- Google / Search Engine Tags -->
+  <meta itemprop="name" content="Medical Conversation">
+  <meta itemprop="description" content="Ini adalah halaman untuk pendaftaran pengguna">
+  <meta itemprop="image" content="https://cdn3.iconfinder.com/data/icons/insurance-related-line/64/Insurance-04-1024.png">
+
+  <!-- Facebook Meta Tags -->
+  <meta property="og:url" content="/register.html">
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Register Form" />
+  <meta property="og:description" content="Ini adalah halaman untuk pendaftaran pengguna" />
+  <meta property="og:image" content="https://cdn3.iconfinder.com/data/icons/insurance-related-line/64/Insurance-04-1024.png" />
+  <meta property="og:site_name" content="Medical Conversation" />
+
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Register Form" />
+  <meta name="twitter:description" content="Ini adalah halaman untuk pendaftaran pengguna" />
+  <meta name="twitter:image" content="https://cdn3.iconfinder.com/data/icons/insurance-related-line/64/Insurance-04-1024.png" />
+
+  <!-- Meta Tags Generated via https://github.com/Xnuvers007/Meta-Generator -->
+  
+<title>Pendaftaran</title>
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.5/purify.min.js" integrity="sha512-/CUtA84sWWqWEBejNrrtWa7Yc4cth3Ome2ymvCKOo9YcZ4sh98tndUy4LutE2xGcAgD4fyz16y+gSyJdGCB5ww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -193,13 +222,16 @@
     <h2>Pendaftaran</h2>
     <form id="registerForm">
       <input type="hidden" id="csrfToken" name="_csrf" value="">
-      <input type="text" id="name" placeholder="Full Name" required>
-      <input type="text" id="username" maxlength="15" pattern="^62[0-9]{8,}$" placeholder="Phone Number (62xxx)" required>
+      <label for="name">Nama Lengkap</label>
+      <input type="text" id="name" placeholder="Full Name" required autocomplete="name" title="Nama lengkap harus diisi">
+      <label for="username">Nomor Telepon</label>
+      <input type="text" id="username" maxlength="15" pattern="^62[0-9]{8,}$" placeholder="Phone Number (62xxx)" required autocomplete="username" title="Nomor telepon harus dimulai dengan 62 dan hanya mengandung angka. Contoh: 6281234567890">
       <span class="helper-text">Format: 628xxxxxxxxxx</span>
-      <input type="password" id="password" minlength="8" placeholder="Password" required>
+      <label for="password">Kata Sandi</label>
+      <input type="password" id="password" minlength="8" placeholder="Password" required autocomplete="new-password" title="Kata sandi harus terdiri dari minimal 8 karakter.">
       <button type="submit">Daftar</button>
     </form>
-    <p>Sudah punya akun ? <a href="/">Masuk</a></p>
+    <p>Sudah punya akun ? <a href="/" noreferrer noopener>Masuk disini</a></p>
   </div>
   
   <script nonce="{{ nonce }}">
@@ -308,7 +340,6 @@ function validateAndSubmitForm(name, username, password, csrfToken) {
       password: sanitizedPassword,
     }),
   })
-    // .then((res) => res.json())
     .then((res) => {
       if (res.status === 429) {
         Swal.fire({
@@ -319,7 +350,9 @@ function validateAndSubmitForm(name, username, password, csrfToken) {
         throw new Error('Terlalu banyak permintaan');
       }
       if (!res.ok) {
-        throw new Error('Gagal mengirim data');
+        return res.json().then((data) => {
+          throw new Error(data.message || 'Gagal mengirim data');
+        });
       }
       return res.json();
     })
@@ -340,6 +373,23 @@ function validateAndSubmitForm(name, username, password, csrfToken) {
           icon: 'error',
           title: 'Gagal',
           text: data.message || 'Pendaftaran gagal',
+          confirmButtonText: 'Oke',
+        });
+      }
+    })
+    .catch((error) => {
+      if (error.message === 'Username already exists') {
+        Swal.fire({
+          icon: 'error',
+          title: 'User Already Exists',
+          text: 'Username/No Telp yang Anda masukkan sudah terdaftar. Silakan gunakan username lain.',
+          confirmButtonText: 'Oke',
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: error.message || 'Terjadi kesalahan saat mendaftar',
           confirmButtonText: 'Oke',
         });
       }

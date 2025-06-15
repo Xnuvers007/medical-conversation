@@ -1,8 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
+  <!-- HTML Meta Tags -->
+  <meta name="description" content="Admin dan Pasien Dashboard">
+  <meta name="language" content="id">
+  <meta name="author" content="Indra Dwi A">
+  <meta name="keywords" content="Medical,Conversation,MedicalConversation,PercakapanMedikal,Medis,PercakapanMedis">
+  <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google / Search Engine Tags -->
+  <meta itemprop="name" content="Medical Conversation">
+  <meta itemprop="description" content="Admin dan Pasien Dashboard">
+  <meta itemprop="image" content="https://cdn3.iconfinder.com/data/icons/insurance-related-line/64/Insurance-04-1024.png">
+
+  <!-- Facebook Meta Tags -->
+  <meta property="og:url" content="/dashboard">
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Admin Pasien Dashboard" />
+  <meta property="og:description" content="Admin dan Pasien Dashboard" />
+  <meta property="og:image" content="https://cdn3.iconfinder.com/data/icons/insurance-related-line/64/Insurance-04-1024.png" />
+  <meta property="og:site_name" content="Medical Conversation" />
+
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Admin Pasien Dashboard" />
+  <meta name="twitter:description" content="Admin dan Pasien Dashboard" />
+  <meta name="twitter:image" content="https://cdn3.iconfinder.com/data/icons/insurance-related-line/64/Insurance-04-1024.png" />
+
+  <!-- Meta Tags Generated via https://github.com/Xnuvers007/Meta-Generator -->
+  
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js"></script>
@@ -316,13 +344,18 @@
 <body>
   <div class="container">
     <h2>Kelola Data Dokter</h2>
-    <form id="addDoctorForm" novalidate>
+    <form id="addDoctorForm" novalidate autocomplete="on">
       <input type="hidden" id="csrfToken" name="_csrf" value="">
-      <input type="text" id="name" placeholder="Nama Dokter" required>
-      <input type="text" id="specialization" placeholder="Spesialisasi" required>
-      <input type="text" id="phone" placeholder="Nomor WhatsApp (62xxx)" required>
-      <input type="text" id="photo_url" placeholder="Foto URL" required>
+      <label for="name">Nama Dokter:</label>
+      <input type="text" id="name" name="name" placeholder="Nama Dokter" required autocomplete="name">
+      <label for="specialization">Spesialisasi:</label>
+      <input type="text" id="specialization" name="specialization" placeholder="Spesialisasi" required autocomplete="organization-title">
+      <label for="phone">Nomor WhatsApp:</label>
+      <input type="text" id="phone" name="phone" placeholder="Nomor WhatsApp (62xxx)" required autocomplete="tel">
+      <label for="photo_url">Foto Dokter (URL):</label>
+      <input type="text" id="photo_url" name="photo_url" placeholder="Foto URL" required autocomplete="url">
       <button type="submit">Tambah Dokter</button>
+      <button type="reset">Bersihkan Formulir</button>
     </form>
 
     <button id="logoutButton" type="button">Keluar</button>
@@ -330,7 +363,8 @@
     <button id="lihatLogsButton" type="button">Lihat Logs</button>
     <button id="deleteLogsButton" type="button"><i class="fas fa-trash-alt"></i> Hapus Semua Log</button>
     <br /><br />
-    <input type="text" id="searchInput" placeholder="Cari dokter atau pengguna..." oninput="filterList()">
+    <label for="searchInput">Cari Dokter atau Pengguna:</label>
+    <input type="text" id="searchInput" name="searchInput" placeholder="Cari dokter atau pengguna..." oninput="filterList()">
     <script async>
 function filterList() {
   const searchInput = document.getElementById('searchInput').value.toLowerCase();
@@ -373,8 +407,18 @@ const csrfToken = document.getElementById('csrfToken').value;
 
 document.addEventListener('DOMContentLoaded', function () {
   fetch('/get-user')
-    .then(res => res.json())
+  .then(res => {
+      if (!res.ok) {
+        // Redirect ke halaman login jika pengguna tidak login
+        window.location.href = '/';
+      }
+      return res.json();
+    })
     .then(user => {
+      if (user.role !== 'admin') {
+        window.location.href = '/dashboard';
+        return;
+      }
       const { username, role } = user;
       Swal.fire({
         title: `Selamat Datang ${username || 'Admin'}`,
@@ -528,12 +572,12 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
             const SanitizedPhotoUrl = DOMPurify.sanitize(doc.photo_url);
             const SanitizedId = DOMPurify.sanitize(doc.id);
             item.innerHTML = `
-              <img src="${SanitizedPhotoUrl}" alt="${SanitizedName}">
+              <img src="${SanitizedPhotoUrl}" alt="${SanitizedName}" loading="eager">
               <div class="doctor-info">
                 <span class="doctor-name">${SanitizedName}</span>
                 <span class="doctor-spec">${SanitizedSpec} • WA: ${SanitizedPhone}</span>
               </div>
-              <button class="deleteDoctorButton" data-id="${SanitizedId}"><i class="fas fa-trash-alt"></i> Hapus</button>
+              <button type="button" class="deleteDoctorButton" data-id="${SanitizedId}"><i class="fas fa-trash-alt"></i> Hapus</button>
             `;
             list.appendChild(item);
           });
@@ -678,12 +722,12 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
       const SanitizedRole = DOMPurify.sanitize(user.role);
       const SanitizedId = DOMPurify.sanitize(user.id);
       userItem.innerHTML = `
-        <img src="https://avatar.iran.liara.run/username?username=${SanitizedName}" alt="${SanitizedName}">
+        <img src="https://avatar.iran.liara.run/username?username=${SanitizedName}" alt="${SanitizedName}" loading="eager">
         <div class="user-info">
           <span class="user-name">${SanitizedName} (${SanitizedUsername})</span>
           <span class="user-role">Role: ${SanitizedRole}</span>
         </div>
-        <button class="deleteUserButton" data-id="${SanitizedId}"><i class="fas fa-trash-alt"></i> Hapus</button>
+        <button type="button" class="deleteUserButton" data-id="${SanitizedId}"><i class="fas fa-trash-alt"></i> Hapus</button>
       `;
       userList.appendChild(userItem);
     });

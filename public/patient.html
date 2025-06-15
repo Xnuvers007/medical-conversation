@@ -1,8 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
+  <!-- HTML Meta Tags -->
+  <meta name="description" content="Admin dan Pasien Dashboard">
+  <meta name="language" content="id">
+  <meta name="author" content="Indra Dwi A">
+  <meta name="keywords" content="Medical,Conversation,MedicalConversation,PercakapanMedikal,Medis,PercakapanMedis">
+  <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google / Search Engine Tags -->
+  <meta itemprop="name" content="Medical Conversation">
+  <meta itemprop="description" content="Admin dan Pasien Dashboard">
+  <meta itemprop="image" content="https://cdn3.iconfinder.com/data/icons/insurance-related-line/64/Insurance-04-1024.png">
+
+  <!-- Facebook Meta Tags -->
+  <meta property="og:url" content="/dashboard">
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Admin Pasien Dashboard" />
+  <meta property="og:description" content="Admin dan Pasien Dashboard" />
+  <meta property="og:image" content="https://cdn3.iconfinder.com/data/icons/insurance-related-line/64/Insurance-04-1024.png" />
+  <meta property="og:site_name" content="Medical Conversation" />
+
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Admin Pasien Dashboard" />
+  <meta name="twitter:description" content="Admin dan Pasien Dashboard" />
+  <meta name="twitter:image" content="https://cdn3.iconfinder.com/data/icons/insurance-related-line/64/Insurance-04-1024.png" />
+
+  <!-- Meta Tags Generated via https://github.com/Xnuvers007/Meta-Generator -->
+
   <title>Patient Dashboard</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.css" rel="stylesheet">
@@ -269,6 +297,7 @@
   <div class="container">
     <h2>Pemesanan Konsultasi Dokter</h2>
     <br />
+    <label for="searchInput">Cari Dokter:</label>
     <input type="text" id="searchInput" placeholder="Cari dokter" oninput="filterList()">
     <script>
       function filterList() {
@@ -285,6 +314,7 @@
       }
     </script>
     <div id="doctorList" class="doctor-list"></div>
+    <label for="message">Keluhan Anda:</label>
     <textarea id="message" placeholder="Tulis keluhan Anda" required></textarea>
     <input type="hidden" id="csrfToken" name="_csrf" value="">
     <button id="logoutButton" type="button">Keluar</button>
@@ -295,8 +325,17 @@
 
 document.addEventListener('DOMContentLoaded', function () {
   fetch('/get-user')
-    .then(res => res.json())
+  .then(res => {
+      if (!res.ok) {
+        window.location.href = '/';
+      }
+      return res.json();
+    })
     .then(user => {
+      if (user.role !== 'patient') {
+        window.location.href = '/dashboard';
+        return;
+      }
       const { name, role } = user;
       Swal.fire({
         title: `Selamat Datang ${name || 'Pengguna'}`,
@@ -412,10 +451,11 @@ textarea.addEventListener('input', function () {
         photo_url = DOMPurify.sanitize(photo_url);
 
         doctorItem.innerHTML = `
-          <img src="${photo_url}" alt="${name}">
+          <img src="${photo_url}" alt="${name}" loading="eager">
           <span>${name}<span class="doctor-specialty">${specialization}</span></span>
         `;
         const button = document.createElement('button');
+        button.type = 'button';
         button.textContent = 'Pilih Dokter';
         button.addEventListener('click', () => sendMessageToDoctor(doc.id));
         doctorItem.appendChild(button);

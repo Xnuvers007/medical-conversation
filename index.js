@@ -85,21 +85,24 @@ const registerLimiter = rateLimit({
   
 
 function isAuthenticated(req, res, next) {
-    if (req.session.user) {
+    // if (req.session.user) {
+      if (req.session && req.session.user) {
         return next();
     }
     res.status(403).json({ error: 'Unauthorized' });
 }
 
 function isAdmin(req, res, next) {
-    if (req.session.user && req.session.user.role === 'admin') {
+    // if (req.session.user && req.session.user.role === 'admin') {
+    if (req.session && req.session.user && req.session.user.role === 'admin') {
         return next();
     }
     res.status(403).json({ error: 'Unauthorized - Admins only' });
 }
 
 function isUser(req, res, next) {
-    if (req.session.user && req.session.user.role === 'patient') {
+    // if (req.session.user && req.session.user.role === 'patient') {
+    if (req.session && req.session.user && req.session.user.role === 'patient') {
         return next();
     }
     res.status(403).json({ error: 'Unauthorized - Users only' });
@@ -204,6 +207,16 @@ app.use((err, req, res, next) => {
 //   });
 // }
 
+// Route untuk halaman admin (hanya untuk admin)
+app.get('/admin.html', isAuthenticated, isAdmin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/admin.html'));
+});
+
+// Route untuk halaman pasien (hanya untuk pasien)
+app.get('/patient.html', isAuthenticated, isUser, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/patient.html'));
+});
+
 app.get('/bookings', isAuthenticated, (req, res) => {
   const { user_id, is_active } = req.query;
   db.all(`SELECT * FROM bookings WHERE user_id = ? AND is_active = ?`, [user_id, is_active], (err, rows) => {
@@ -249,7 +262,7 @@ app.post('/register', registerLimiter, [
     .isAlphanumeric().withMessage('Username harus berupa alfanumerik')
     .not().matches(/\s/).withMessage('Username tidak boleh mengandung spasi'),
   body('password')
-    .isLength({ min: 6 }).withMessage('Password harus memiliki minimal 6 karakter')
+    .isLength({ min: 8 }).withMessage('Password harus memiliki minimal 6 karakter')
     .not().matches(/\s/).withMessage('Password tidak boleh mengandung spasi'),
   body('name').notEmpty().withMessage('Name is required'),
 ], (req, res) => {
