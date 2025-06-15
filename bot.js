@@ -73,9 +73,9 @@ async function initWhatsAppBot(db) {
     logger: pino({ level: 'info' }),
     auth: state,
     printQRInTerminal: true,
-    connectTimeoutMs: 60000,
-    defaultQueryTimeoutMs: 60000,
-    timeoutMs: 60000,
+    connectTimeoutMs: 120000,
+    defaultQueryTimeoutMs: 120000,
+    timeoutMs: 120000,
   });
 
   if (!state.creds.me) {
@@ -192,10 +192,20 @@ async function initWhatsAppBot(db) {
 
   sock.ev.on('chats.update', (chats) => {
     chats.forEach((chat) => {
+      console.log(`[Chat Diperbarui] ID: ${chat.id}, Pesan Terakhir: ${chat.messages?.[0]?.message}`);
       console.log(`[${new Date().toLocaleString()}] Chat diperbarui:`, chat);
     });
   });
 
+  sock.ev.on('messages.update', (updates) => {
+    updates.forEach((update) => {
+      console.log(`[Pesan Diperbarui] ID: ${update.key.id}, Status: ${update.update.status}`);
+    });
+  });
+
+  sock.ev.on('*', (event, data) => {
+    console.log(`[${new Date().toLocaleString()}] Event: ${event}`, data);
+  });
   /////////////////////////////
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
