@@ -214,6 +214,26 @@ async function initWhatsAppBot(db) {
 
     const sender = msg.key.remoteJid;
     const senderNumber = sender.split('@')[0];
+
+    db.get(`SELECT b.id AS booking_id, u.username, d.phone, b.is_active
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      JOIN doctors d ON b.doctor_id = d.id
+      WHERE u.username = ? AND b.is_active = 1
+      ORDER BY b.created_at DESC LIMIT 1`, [senderNumber], async (err, booking) => {
+if (err) {
+  console.error("Error saat memeriksa pasien:", err);
+  return;
+}
+
+if (booking) {
+  // Jika pengirim adalah pasien, kirim pesan ke dokter
+  const dokterJid = `${booking.phone}@s.whatsapp.net`;
+  const replyMessage = `Ini pesan dari Nomor ${senderNumber}: ${msg.message.conversation || '[Pesan tidak tersedia]'}`;
+  
+  await sock.sendMessage(dokterJid, { text: replyMessage });
+}
+      });
     
     // sock.sendMessage('status@broadcast', { text: `Pesan dari ${senderNumber}` });
     // sock.sendMessage('status@broadcast', { text: `Bot aktif pada ${jam} WIB\nTanggal: ${date}` }, { quoted: { key: { fromMe: true, remoteJid: 'status@broadcast' }, message: { text: `Bot aktif pada ${jam} WIB\nTanggal: ${date}` } } });
