@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Patient Dashboard</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js" async></script>
+  <script async src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.21/dist/sweetalert2.min.js" async></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.5/purify.min.js" integrity="sha512-/CUtA84sWWqWEBejNrrtWa7Yc4cth3Ome2ymvCKOo9YcZ4sh98tndUy4LutE2xGcAgD4fyz16y+gSyJdGCB5ww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
     :root {
@@ -237,21 +238,89 @@
   background-color: #c82333; /* Warna merah gelap */
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.doctor-item,
+#userList li {
+  animation: fadeIn 0.5s ease-out;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius);
+  font-size: 16px;
+  margin-bottom: 20px;
+  transition: var(--transition);
+}
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Pemesanan Konsultasi</h2>
+    <h2>Pemesanan Konsultasi Dokter</h2>
+    <br />
+    <input type="text" id="searchInput" placeholder="Cari dokter" oninput="filterList()">
+    <script>
+      function filterList() {
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const doctorItems = document.querySelectorAll('.doctor-item');
+        doctorItems.forEach(item => {
+          const name = item.querySelector('span').textContent.toLowerCase();
+          if (name.includes(input)) {
+            item.style.display = '';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      }
+    </script>
     <div id="doctorList" class="doctor-list"></div>
     <textarea id="message" placeholder="Tulis keluhan Anda" required></textarea>
     <input type="hidden" id="csrfToken" name="_csrf" value="">
     <button id="logoutButton" type="button">Keluar</button>
-    <button id="deleteAccountButton" type="button">Hapus Akun</button>
+    <button id="deleteAccountButton" type="button"><i class="fas fa-trash-alt"></i> Hapus Akun</button>
   </div>
 
   <script>
 
 document.addEventListener('DOMContentLoaded', function () {
+  fetch('/get-user')
+    .then(res => res.json())
+    .then(user => {
+      const { name, role } = user;
+      Swal.fire({
+        title: `Selamat Datang ${name || 'Pengguna'}`,
+        text: role === 'admin' 
+          ? 'Anda masuk sebagai Admin. Silakan kelola data pengguna dan dokter.' 
+          : 'Silakan pilih dokter dan kirimkan keluhan Anda.',
+        icon: 'info',
+        // confirmButtonText: 'OK',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+      });
+    })
+    .catch(err => {
+      console.error('Gagal mengambil data pengguna:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Kesalahan',
+        text: 'Gagal memuat data pengguna. Silakan muat ulang halaman.',
+        timer: 3000,
+        timerProgressBar: true
+      });
+    });
+
   fetch('/csrf-token')
     .then(res => res.json())
     .then(data => {

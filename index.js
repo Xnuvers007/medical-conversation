@@ -12,6 +12,7 @@ const chalk = require('chalk');
 const fs = require('fs');
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
+const os = require('os');
 
 require('dotenv').config();
 
@@ -48,10 +49,12 @@ app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
-    styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
     imgSrc: ["'self'", "*"],
-    scriptSrcAttr: ["'none'"],
-    styleSrcAttr: ["'none'"],
+    // scriptSrcAttr: ["'none'"],
+    // styleSrcAttr: ["'none'"],
+    scriptSrcAttr: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+    styleSrcAttr: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
   }
 }));
 
@@ -67,6 +70,18 @@ const limiter = rateLimit({
   });
   
   app.use(limiter);
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 menit
+    max: 5, // Maksimum 5 permintaan login
+    message: "Terlalu banyak permintaan login, coba lagi nanti.",
+});
+
+const registerLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 menit
+    max: 5, // Maksimum 5 permintaan registrasi
+    message: "Terlalu banyak permintaan registrasi, coba lagi nanti.",
+});
   
 
 function isAuthenticated(req, res, next) {
@@ -229,11 +244,20 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
   
 
 // Register route
-app.post('/register', [
-  body('username').isAlphanumeric().withMessage('Username must be alphanumeric'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('name').notEmpty().withMessage('Name is required')
+app.post('/register', registerLimiter, [
+  body('username')
+    .isAlphanumeric().withMessage('Username harus berupa alfanumerik')
+    .not().matches(/\s/).withMessage('Username tidak boleh mengandung spasi'),
+  body('password')
+    .isLength({ min: 6 }).withMessage('Password harus memiliki minimal 6 karakter')
+    .not().matches(/\s/).withMessage('Password tidak boleh mengandung spasi'),
+  body('name').notEmpty().withMessage('Name is required'),
 ], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
     const { username, password, name } = req.body;
     console.log(`Mencoba mendaftarkan pengguna baru: ${username}`);
   
@@ -249,8 +273,12 @@ app.post('/register', [
       });
   });
   // Login route
-  app.post('/login', (req, res) => {
+  app.post('/login', loginLimiter, (req, res) => {
     const { username, password } = req.body;
+
+    if (/\s/.test(username) || /\s/.test(password)) {
+      return res.status(400).json({ error: 'Username dan password tidak boleh mengandung spasi' });
+    }
   
     // Hardcoded admin login
     const adminUsername = process.env.ADMIN_USERNAME;
@@ -267,7 +295,7 @@ app.post('/register', [
       }
   
       if (user) {
-        req.session.user = { id: user.id, username: user.username, role: user.role };
+        req.session.user = { id: user.id, username: user.username, name: user.name, role: user.role };
         logUserActivity(user.id, 'login');
         res.json({ status: 'success', role: user.role });
       } else {
@@ -278,8 +306,23 @@ app.post('/register', [
 
 // Get current logged in user
 app.get('/get-user', isAuthenticated || isUser, (req, res) => {
-    if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
-    res.json(req.session.user);
+    // if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
+    // res.json(req.session.user);
+    if (!req.session.user) {
+      return res.status(401).json({ error: 'Pengguna belum login' });
+    }
+    
+    if (!req.session.user) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const { id, username, name, role } = req.session.user;
+
+    // if (!id || !username || !role) {
+    //   return res.status(500).json({ error: 'Data pengguna tidak lengkap' });
+    // }
+
+    res.json({ id, username, name: name || 'Pengguna', role });
   });
   
   // Get all doctors
@@ -309,13 +352,22 @@ app.get('/get-user', isAuthenticated || isUser, (req, res) => {
   });
   
   // Add new doctor (admin only)
-  app.post('/doctors', isAuthenticated && isAdmin, (req, res) => {
+  app.post('/doctors', csrfProtection, isAuthenticated && isAdmin, [
+    body('name').notEmpty().withMessage('Name is required'),
+    body('specialization').notEmpty().withMessage('Specialization is required'),
+    body('phone').notEmpty().withMessage('Phone number is required'),
+    body('photo_url').isURL().withMessage('Photo URL must be a valid URL')
+  ] ,(req, res) => {
     if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
     const { name, specialization, phone, photo_url } = req.body;
     
-    if (!photo_url.startsWith('http://') && !photo_url.startsWith('https://')) {
+    if (
+      !(photo_url.startsWith('http://') || photo_url.startsWith('https://')) ||
+      !(photo_url.endsWith('.jpg') || photo_url.endsWith('.jpeg') || photo_url.endsWith('.png'))
+    ) {
       return res.status(400).json({ error: 'Invalid photo URL' });
     }
+    
 
     db.run(`INSERT INTO doctors (name, specialization, phone, photo_url) VALUES (?, ?, ?, ?)`,
       [name, specialization, phone, photo_url], (err) => {
@@ -416,6 +468,7 @@ app.get('/admin/users', isAuthenticated && isAdmin, (req, res) => {
       if (err) {
         return res.status(500).json({ error: 'Gagal logout' });
       }
+      res.clearCookie('connect.sid');
       res.json({ status: 'success', message: 'Logged out successfully' });
     });
   });
@@ -448,7 +501,25 @@ app.get('/admin/users', isAuthenticated && isAdmin, (req, res) => {
 initWhatsAppBot(db);
 
 app.listen(3000, () => {
-  console.log(`Server started on http://localhost:3000`);
+  const networkInterfaces = os.networkInterfaces();
+  const lanIps = [];
+
+  // Ambil semua alamat IP dari network interfaces
+  for (const interfaceName in networkInterfaces) {
+    const interfaces = networkInterfaces[interfaceName];
+    for (const iface of interfaces) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        lanIps.push(iface.address); // Simpan LAN IP
+      }
+    }
+  }
+
+  console.log(chalk.green(`Server berjalan di:`));
+  console.log(chalk.green(`- Localhost: ${process.env.NODE_ENV === 'production' ? 'https' : 'http'}://localhost:3000`));
+  lanIps.forEach((ip) => {
+    console.log(chalk.green(`- LAN IP: ${process.env.NODE_ENV === 'production' ? 'https' : 'http'}://${ip}:3000`));
+  });
+
   console.log(chalk.yellow('Jika ingin mengganti sesi, silahkan hapus folder auth dan jika ingin menghapus semua data, silahkan hapus db.sqlite'));
   const authDir = path.join(__dirname, 'auth');
   

@@ -16,6 +16,16 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     const csrfToken = document.getElementById('csrfToken').value;
+
+    if (/\s/.test(username) || /\s/.test(password)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Invalid Input',
+          text: 'Username dan password tidak boleh mengandung spasi.',
+        });
+        return; // Jangan lanjutkan jika ada spasi
+      }
+    
   
     if (!username || !password) {
         Swal.fire({
@@ -52,7 +62,20 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
         },
         body: JSON.stringify({ username: sanitizedUsername, password: sanitizedPassword })
     })
-    .then(response => response.json())
+    .then((response) => {
+        if (response.status === 429) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Terlalu Banyak Permintaan',
+            text: 'Anda telah mencapai batas maksimum percobaan login. Silakan coba lagi nanti.',
+          });
+          throw new Error('Too Many Requests');
+        }
+        if (!response.ok) {
+          throw new Error('Login gagal');
+        }
+        return response.json();
+      })
     .then(data => {
         if (data.status === 'success') {
             // Redirect ke halaman dashboard setelah login berhasil
@@ -72,7 +95,7 @@ document.getElementById('authForm').addEventListener('submit', function(e) {
         Swal.fire({
             icon: 'error',
             title: 'Terjadi kesalahan',
-            text: 'Gagal menghubungi server, coba lagi nanti.',
+            text: error,
         });
     });
   });

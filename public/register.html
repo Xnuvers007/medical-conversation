@@ -228,6 +228,24 @@ document.getElementById('registerForm').addEventListener('submit', function (e) 
   const password = document.getElementById('password').value.trim();
   const csrfToken = document.getElementById('csrfToken').value;
 
+  if (!csrfToken) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Kesalahan',
+      text: 'Token CSRF tidak ditemukan. Silakan muat ulang halaman.',
+    });
+    return;
+  }
+
+  if (/\s/.test(username) || /\s/.test(password)) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Invalid Input',
+      text: 'Username, nama, dan password tidak boleh mengandung spasi.',
+    });
+    return; // Jangan lanjutkan jika username mengandung spasi
+  }
+
   // Validasi jika ada field yang kosong
   if (name === '' || username === '' || password === '') {
     Swal.fire({
@@ -290,7 +308,21 @@ function validateAndSubmitForm(name, username, password, csrfToken) {
       password: sanitizedPassword,
     }),
   })
-    .then((res) => res.json())
+    // .then((res) => res.json())
+    .then((res) => {
+      if (res.status === 429) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Terlalu Banyak Permintaan',
+          text: 'Anda telah melakukan terlalu banyak permintaan. Silakan coba lagi nanti.',
+        });
+        throw new Error('Terlalu banyak permintaan');
+      }
+      if (!res.ok) {
+        throw new Error('Gagal mengirim data');
+      }
+      return res.json();
+    })
     .then((data) => {
       if (data.status === 'success') {
         Swal.fire({
