@@ -73,9 +73,9 @@ async function initWhatsAppBot(db) {
     logger: pino({ level: 'info' }),
     auth: state,
     printQRInTerminal: true,
-    connectTimeoutMs: 120000,
-    defaultQueryTimeoutMs: 120000,
-    timeoutMs: 120000,
+    connectTimeoutMs: 300000, // 300000 = 5 menit // 120000, 2 menit
+    defaultQueryTimeoutMs: 300000,
+    timeoutMs: 300000,
   });
 
   if (!state.creds.me) {
