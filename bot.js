@@ -78,6 +78,29 @@ async function initWhatsAppBot(db) {
     timeoutMs: 300000,
   });
 
+  sock.ev.on('call', async (callEvents) => {
+    for (const call of callEvents) {
+        if (call.status === 'offer') {
+            console.log(`Panggilan masuk dari ${call.from}, menolak...`);
+
+            const participant = call.participants && call.participants[0]
+                ? call.participants[0].tag
+                : call.from; // fallback ke pengirim jika partisipan tidak tersedia
+
+            const phoneNumber = participant.split('@')[0];
+            const waLink = `https://wa.me/${phoneNumber}`;
+
+            try {
+                await sock.rejectCall(call.id, call.from, participant);
+                await sock.sendMessage(call.from, { text: `Panggilan dari ${waLink} telah ditolak.` });
+                console.log(`Panggilan dari ${waLink} telah ditolak.`);
+            } catch (err) {
+                console.error("Gagal menolak panggilan:", err);
+            }
+        }
+    }
+});
+
   if (!state.creds.me) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     rl.question(chalk.yellow('Apakah anda ingin login ? (y/n): '), answer => {
@@ -494,37 +517,41 @@ if (booking) {
 // Handle .listpasien
 if (messageContent.toLowerCase() === ".listpasien") {
   const dokterPhone = senderNumber;
-  db.all(`SELECT u.username, b.created_at, b.is_active
-      FROM bookings b
-      JOIN users u ON b.user_id = u.id
-      JOIN doctors d ON b.doctor_id = d.id
-      WHERE d.phone = ?
-      ORDER BY b.created_at DESC`, [dokterPhone], async (err, rows) => {
-      if (err) {
-          await sock.sendMessage(sender, { text: "Gagal mengambil daftar pasien." });
-          return;
-      }
 
-      if (rows.length === 0) {
-          await sock.sendMessage(sender, { text: "Tidak ada pasien yang sedang konsultasi." });
-          return;
-      }
+  // Ambil daftar pasien terbaru berdasarkan created_at
+  db.all(`
+    SELECT u.username, MAX(b.created_at) AS created_at, b.is_active
+    FROM bookings b
+    JOIN users u ON b.user_id = u.id
+    JOIN doctors d ON b.doctor_id = d.id
+    WHERE d.phone = ?
+    GROUP BY u.username
+    ORDER BY created_at DESC
+  `, [dokterPhone], async (err, rows) => {
+    if (err) {
+      await sock.sendMessage(sender, { text: "Gagal mengambil daftar pasien." });
+      return;
+    }
 
-      const listText = rows.map((r, i) => {
-          const createdAt = new Date(r.created_at);
-          createdAt.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }); // Menetapkan zona waktu WIB
-          const hari = createdAt.getDate().toString().padStart(2, '0');
-          const bulan = (createdAt.getMonth() + 1).toString().padStart(2, '0');
-          const tahun = createdAt.getFullYear();
-          const jam = createdAt.getHours().toString().padStart(2, '0');
-          const menit = createdAt.getMinutes().toString().padStart(2, '0');
-          const detik = createdAt.getSeconds().toString().padStart(2, '0');
-          const aktif = r.is_active ? "Aktif" : "Tidak Aktif";
-          
-          return `${i + 1}. ${r.username} (mulai ${hari}/${bulan}/${tahun}, ${jam}.${menit}.${detik} WIB) - Status: ${aktif}`;
-      }).join("\n");    
-      
-      await sock.sendMessage(sender, { text: `Daftar pasien:\n\n${listText}` });
+    if (rows.length === 0) {
+      await sock.sendMessage(sender, { text: "Tidak ada pasien yang sedang konsultasi." });
+      return;
+    }
+
+    const listText = rows.map((r, i) => {
+      const createdAt = new Date(r.created_at);
+      const hari = createdAt.getDate().toString().padStart(2, '0');
+      const bulan = (createdAt.getMonth() + 1).toString().padStart(2, '0');
+      const tahun = createdAt.getFullYear();
+      const jam = createdAt.getHours().toString().padStart(2, '0');
+      const menit = createdAt.getMinutes().toString().padStart(2, '0');
+      const detik = createdAt.getSeconds().toString().padStart(2, '0');
+      const aktif = r.is_active ? "Aktif" : "Tidak Aktif";
+
+      return `${i + 1}. ${r.username} (mulai ${hari}/${bulan}/${tahun}, ${jam}.${menit}.${detik} WIB) - Status: ${aktif}`;
+    }).join("\n");
+
+    await sock.sendMessage(sender, { text: `Daftar pasien:\n\n${listText}` });
   });
   return;
 }
