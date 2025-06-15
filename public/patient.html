@@ -308,18 +308,37 @@
     <label for="searchInput">Cari Dokter:</label>
     <input type="text" id="searchInput" placeholder="Cari dokter" oninput="filterList()">
     <script>
-      function filterList() {
-        const input = document.getElementById('searchInput').value.toLowerCase();
-        const doctorItems = document.querySelectorAll('.doctor-item');
-        doctorItems.forEach(item => {
-          const name = item.querySelector('span').textContent.toLowerCase();
-          if (name.includes(input)) {
-            item.style.display = '';
-          } else {
-            item.style.display = 'none';
-          }
-        });
-      }
+function filterList() {
+  const input = document.getElementById('searchInput').value.toLowerCase();
+  const doctorItems = document.querySelectorAll('.doctor-item');
+  let hasResults = false;
+
+  // Hapus pesan "tidak ada hasil" jika sudah ada sebelumnya
+  const noResultsMessage = document.getElementById('noResultsMessage');
+  if (noResultsMessage) {
+    noResultsMessage.remove();
+  }
+
+  doctorItems.forEach(item => {
+    const name = item.querySelector('span').textContent.toLowerCase();
+    if (name.includes(input)) {
+      item.style.display = '';
+      hasResults = true; // Jika ada hasil, set ke true
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  // Jika tidak ada hasil, tambahkan pesan dengan font merah
+  if (!hasResults) {
+    const message = document.createElement('h2');
+    message.id = 'noResultsMessage'; // Berikan ID agar mudah dihapus
+    message.textContent = 'Tidak ada informasi dokter yang Anda cari.';
+    message.style.color = 'red'; // Atur warna font menjadi merah
+    message.style.textAlign = 'center'; // Tambahkan alignment agar lebih rapi
+    document.getElementById('doctorList').appendChild(message);
+  }
+}
     </script>
     <div id="doctorList" class="doctor-list"></div>
     <label for="message">Keluhan Anda:</label>

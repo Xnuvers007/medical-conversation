@@ -380,25 +380,46 @@ function filterList() {
   const userList = document.getElementById('userList');
   const doctorItems = doctorList.getElementsByTagName('li');
   const userItems = userList.getElementsByTagName('li');
+  let hasResults = false; // Variabel untuk melacak apakah ada hasil pencarian
+
+  // Hapus pesan "tidak ada hasil" jika sudah ada sebelumnya
+  const noResultsMessage = document.getElementById('noResultsMessage');
+  if (noResultsMessage) {
+    noResultsMessage.remove();
+  }
+
   // Filter dokter
   for (let i = 0; i < doctorItems.length; i++) {
     const doctorName = doctorItems[i].querySelector('.doctor-name').textContent.toLowerCase();
     const doctorSpec = doctorItems[i].querySelector('.doctor-spec').textContent.toLowerCase();
     if (doctorName.includes(searchInput) || doctorSpec.includes(searchInput)) {
       doctorItems[i].style.display = '';
+      hasResults = true; // Jika ada hasil, set ke true
     } else {
       doctorItems[i].style.display = 'none';
     }
   }
+
   // Filter pengguna
   for (let i = 0; i < userItems.length; i++) {
     const userName = userItems[i].querySelector('.user-name').textContent.toLowerCase();
     const userRole = userItems[i].querySelector('.user-role').textContent.toLowerCase();
     if (userName.includes(searchInput) || userRole.includes(searchInput)) {
       userItems[i].style.display = '';
+      hasResults = true; // Jika ada hasil, set ke true
     } else {
       userItems[i].style.display = 'none';
     }
+  }
+
+  // Jika tidak ada hasil, tambahkan pesan dengan font merah
+  if (!hasResults) {
+    const message = document.createElement('h2');
+    message.id = 'noResultsMessage'; // Berikan ID agar mudah dihapus
+    message.textContent = 'Tidak ada informasi yang Anda cari.';
+    message.style.color = 'red'; // Atur warna font menjadi merah
+    message.style.textAlign = 'center'; // Tambahkan alignment agar lebih rapi
+    document.body.appendChild(message); // Tambahkan pesan ke dalam body
   }
 }
     </script>
