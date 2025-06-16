@@ -175,7 +175,7 @@ async function initWhatsAppBot(db) {
   const menus = {
     general: [
       { command: '.menu', description: 'Menampilkan menu' },
-      { command: '.gambar', description: 'Mengirim gambar contoh' },
+      // { command: '.gambar', description: 'Mengirim gambar contoh' },
       { command: '.ai', description: 'Bertanya kepada AI' },
       { command: '.tanyaai', description: 'Bertanya kepada AI dengan format lain' },
     ],
@@ -191,7 +191,7 @@ async function initWhatsAppBot(db) {
     patient: [
       { command: '.ai', description: 'Bertanya kepada AI' },
       { command: '.tanyaai', description: 'Bertanya kepada AI dengan format lain' },
-      { command: '.gambar', description: 'Mengirim gambar contoh' },
+      // { command: '.gambar', description: 'Mengirim gambar contoh' },
       { command: '.akhiri', description: 'Mengakhiri sesi konsultasi' },
       { command: '.stop', description: 'Mengakhiri sesi konsultasi' },
     ],
@@ -297,7 +297,7 @@ if (booking) {
 
   if (isFirstMessage) {
       // Periksa di tabel users
-      db.get(`SELECT role, welcome_sent FROM users WHERE username = ?`, [senderNumber], async (err, user) => {
+      db.get(`SELECT name, role, welcome_sent FROM users WHERE username = ?`, [senderNumber], async (err, user) => {
           if (err) {
               console.error('Error saat memeriksa tabel users:', err);
               return;
@@ -310,7 +310,10 @@ if (booking) {
               }
   
               // Kirim pesan selamat datang untuk pengguna
-              await sock.sendMessage(sender, { text: "Selamat datang Pasien! Ketik .menu untuk melihat fitur yang tersedia. Fitur yang tersedia untuk Anda: .ai dan .gambar." });
+              const userName = user.name || "Pengguna"; // Gunakan fallback jika name undefined
+              await sock.sendMessage(sender, { 
+                  text: `Selamat datang Pasien atas nama ${userName}! Ketik .menu untuk melihat fitur yang tersedia. Fitur yang tersedia untuk Anda: .ai dan .gambar.` 
+              });
   
               // Tandai bahwa pesan selamat datang sudah dikirim
               db.run(`UPDATE users SET welcome_sent = 1 WHERE username = ?`, [senderNumber], (err) => {
@@ -325,7 +328,7 @@ if (booking) {
           }
   
           // Jika tidak ditemukan di tabel users, periksa di tabel doctors
-          db.get(`SELECT 'doctor' AS role, welcome_sent FROM doctors WHERE phone = ?`, [senderNumber], async (err, doctor) => {
+          db.get(`SELECT name, specialization, welcome_sent FROM doctors WHERE phone = ?`, [senderNumber], async (err, doctor) => {
               if (err) {
                   console.error('Error saat memeriksa tabel doctors:', err);
                   return;
@@ -338,7 +341,11 @@ if (booking) {
                   }
   
                   // Kirim pesan selamat datang untuk dokter
-                  await sock.sendMessage(sender, { text: "Selamat datang Dokter! Ketik .menu untuk melihat fitur yang tersedia." });
+                  const doctorName = doctor.name || "Dokter"; // Gunakan fallback jika name undefined
+                  const specialization = doctor.specialization || "Spesialisasi tidak diketahui"; // Gunakan fallback jika specialization undefined
+                  await sock.sendMessage(sender, { 
+                      text: `Selamat datang Dokter ${doctorName} (${specialization})! Ketik .menu untuk melihat fitur yang tersedia.` 
+                  });
   
                   // Tandai bahwa pesan selamat datang sudah dikirim
                   db.run(`UPDATE doctors SET welcome_sent = 1 WHERE phone = ?`, [senderNumber], (err) => {
@@ -353,7 +360,9 @@ if (booking) {
               }
   
               // Jika pengguna tidak ditemukan di kedua tabel
-              await sock.sendMessage(sender, { text: "Selamat datang! Ketik .menu untuk melihat fitur yang tersedia." });
+              await sock.sendMessage(sender, { 
+                  text: "Selamat datang! Ketik .menu untuk melihat fitur yang tersedia." 
+              });
               activeSessions[senderNumber] = { welcomeSent: true };
               return;
           });

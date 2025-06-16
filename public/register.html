@@ -3,6 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
   <meta charset="utf-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
   <!-- HTML Meta Tags -->
   <meta name="description" content="Ini adalah halaman untuk pendaftaran pengguna">
@@ -47,6 +48,26 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.5/purify.min.js" integrity="sha512-/CUtA84sWWqWEBejNrrtWa7Yc4cth3Ome2ymvCKOo9YcZ4sh98tndUy4LutE2xGcAgD4fyz16y+gSyJdGCB5ww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   
   <style>
+
+.toggle-password {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 16px;
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.3s ease;
+  }
+
+  .toggle-password:hover {
+    color: var(--primary-color);
+  }
+
+
     @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
     :root {
@@ -189,7 +210,7 @@
     }
 
     .container > h2::after {
-      content: '⚕️';
+      content: 'âš•ï¸';
       position: absolute;
       top: 20px;
       left: 50%;
@@ -468,17 +489,17 @@
     }
 
     .trust-indicator::before {
-      content: '👌';
+      content: 'ðŸ‘Œ';
       margin-right: 4px;
       font-size: 10px;
     }
 
     .trust-indicator:nth-child(2)::before {
-      content: '⚡';
+      content: 'âš¡';
     }
 
     .trust-indicator:nth-child(3)::before {
-      content: '✨';
+      content: 'âœ¨';
     }
 
     /* Responsive design */
@@ -585,6 +606,9 @@
       <div class="form-field">
         <label for="password">Kata Sandi</label>
         <input type="password" id="password" minlength="8" placeholder="Buat kata sandi yang aman" required autocomplete="new-password" title="Kata sandi harus terdiri dari minimal 8 karakter.">
+        <button type="button" id="togglePassword" class="toggle-password" title="lihat password">
+          <i class="fas fa-eye"></i>
+        </button>
         <span class="helper-text">Minimal 8 karakter untuk keamanan akun Anda</span>
       </div>
       
@@ -610,7 +634,7 @@
           <span class="trust-indicator">Terpercaya</span>
         </div>
         
-        <p id="copyright-text">© 2024 Medical Conversation. Melayani dengan sepenuh hati.</p>
+        <p id="copyright-text">Â© 2024 Medical Conversation. Melayani dengan sepenuh hati.</p>
       </div>
     </footer>   
   </div>
@@ -784,6 +808,21 @@ function validateAndSubmitForm(name, username, password, csrfToken) {
     if (copyrightElement) {
       copyrightElement.textContent = `\u00A9 ${currentYear} Kelompok 1. All rights reserved.`;
     }
+
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+
+    togglePassword.addEventListener('click', function () {
+      // Toggle tipe input antara "password" dan "text"
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+
+      // Ubah ikon tombol
+      const icon = this.querySelector('i');
+      icon.classList.toggle('fa-eye');
+      icon.classList.toggle('fa-eye-slash');
+    });
+
   });
   </script>  
 </body>
