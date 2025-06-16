@@ -240,7 +240,7 @@
       color: var(--text-secondary);
       font-size: 15px;
       font-weight: 400;
-      margin-bottom: 32px;
+/*      margin-bottom: 32px; */
     }
     
     #authForm {
@@ -354,7 +354,7 @@
     /* Enhanced link styling */
     p {
       text-align: center;
-      margin-top: 24px;
+/*      margin-top: 24px; */
       color: var(--text-secondary);
       font-size: 14px;
       line-height: 1.5;
@@ -530,6 +530,53 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    .instagram-link {
+      text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    margin: 0 4px;
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    border-radius: 20px;
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.instagram-link:hover {
+    transform: translateY(-2px);
+    text-decoration: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.instagram-icon {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.instagram-username {
+    margin-right: 8px;
+}
+
+.instagram-badge {
+    background-color: rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Untuk tampilan responsif */
+@media (max-width: 768px) {
+    .instagram-link {
+        padding: 4px 10px;
+        font-size: 14px;
+        text-decoration: none;
+    }
+}
   </style>
 </head>
 <body>
@@ -539,8 +586,16 @@
         <div class="medical-logo"></div>
         <h2>Masuk / Daftar</h2>
         <p class="subtitle">Akses platform konsultasi medis Anda</p>
-      </div>
-      
+        <br />
+        <p class="subtitle">
+          Jika anda lupa Akun anda, silahkan hubungi admin untuk mendapatkan bantuan. Hubungi 
+          <a href="https://instagram.com/indradwi.25" target="_blank" rel="noopener noreferrer" class="instagram-link">
+              <span class="instagram-icon"><i class="fab fa-instagram"></i></span>
+              <span class="instagram-username">Indra Dwi A</span>
+              <span class="instagram-badge">Admin</span>
+          </a> 
+          di Instagram.
+        </div>
       <form id="authForm">
         <input type="hidden" id="csrfToken" name="_csrf" value="">
         
