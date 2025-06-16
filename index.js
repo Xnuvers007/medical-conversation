@@ -275,6 +275,22 @@ app.post('/register', registerLimiter, [
     const { username, password, name } = req.body;
     console.log(`Mencoba mendaftarkan pengguna baru: ${username}`);
   
+  // Periksa apakah nomor sudah terdaftar sebagai dokter
+  db.get(`SELECT * FROM doctors WHERE phone = ?`, [username], (err, doctor) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
+
+    if (doctor) {
+      // Jika nomor sudah terdaftar sebagai dokter, tolak pendaftaran
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Nomor ini sudah terdaftar dan tidak dapat digunakan untuk pendaftaran pasien.' 
+      });
+    }
+
+    // Lanjutkan dengan pendaftaran jika nomor belum terdaftar sebagai dokter
     db.run(`INSERT INTO users (name, role, username, password) VALUES (?, 'patient', ?, ?)`,
       [name, username, password], function (err) {
         if (err) {
@@ -286,6 +302,7 @@ app.post('/register', registerLimiter, [
         res.json({ status: 'success' });
       });
   });
+});
   // Login route
   app.post('/login', loginLimiter, (req, res) => {
     const { username, password } = req.body;
