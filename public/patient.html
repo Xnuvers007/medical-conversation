@@ -193,7 +193,7 @@
   transition: var(--transition);
   margin-bottom: 25px;
   font-family: inherit;
-  resize: none; /* ❗ Mencegah resize manual */
+  resize: none; /* â— Mencegah resize manual */
 }
 
     
@@ -224,7 +224,7 @@
     }
     
     #logoutButton:before {
-      content: '↩';
+      content: 'â†©';
       margin-right: 5px;
       font-size: 16px;
     }
@@ -389,15 +389,128 @@
       height: 24px;
     }
   }
+
+  /* Mode Gelap */
+
+#toggleDarkMode {
+  background-color: #4a6fdc;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+body.dark-mode {
+  background-color: #1e1e2f;
+  color: #e4e4e7;
+}
+
+body.dark-mode h2 {
+  color: #a5b4fc;
+}
+
+body.dark-mode .container {
+  background-color: #2a2a40;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode textarea,
+body.dark-mode input[type="text"],
+body.dark-mode input[type="password"] {
+  background-color: #3a3a55;
+  color: #e4e4e7;
+  border: 1px solid #4a4a6a;
+}
+
+body.dark-mode textarea::placeholder,
+body.dark-mode input::placeholder {
+  color: #a1a1b5;
+}
+
+body.dark-mode button {
+  background-color: #4a6fdc;
+  color: #ffffff;
+}
+
+body.dark-mode button:hover {
+  background-color: #3a5fc6;
+}
+
+body.dark-mode .doctor-item {
+  background-color: #2a2a40;
+  border: 1px solid #4a4a6a;
+}
+
+body.dark-mode .doctor-item:hover {
+  border-color: #6a6abf;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .doctor-item span {
+  color: #e4e4e7;
+}
+
+body.dark-mode .doctor-specialty {
+  color: #a1a1b5;
+}
+
+body.dark-mode .site-footer {
+  background-color: #2a2a40;
+  color: #a1a1b5;
+}
+
+body.dark-mode .site-footer p:before {
+  background: linear-gradient(90deg, rgba(74, 111, 220, 0.5), rgba(140, 169, 255, 0.5));
+}
+
+/* Transisi Halus */
+body,
+.container,
+textarea,
+input,
+button,
+.doctor-item,
+.site-footer {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Pemesanan Konsultasi Dokter</h2>
+    <button id="toggleDarkMode">Mode Gelap</button>
+    <br />
+    <label for="message">Keluhan Anda:</label>
+    <textarea id="message" placeholder="Tulis keluhan Anda" required></textarea>
     <br />
     <label for="searchInput">Cari Dokter:</label>
     <input type="text" id="searchInput" placeholder="Cari dokter" oninput="filterList()">
     <script>
+document.addEventListener('DOMContentLoaded', function () {
+  const toggleDarkMode = document.getElementById('toggleDarkMode');
+
+  // Periksa preferensi mode gelap dari localStorage
+  if (localStorage.getItem('darkMode') === 'enabled') {
+    document.body.classList.add('dark-mode');
+    toggleDarkMode.textContent = 'Mode Terang';
+  }
+
+  toggleDarkMode.addEventListener('click', function () {
+    document.body.classList.toggle('dark-mode');
+    if (document.body.classList.contains('dark-mode')) {
+      localStorage.setItem('darkMode', 'enabled');
+      toggleDarkMode.textContent = 'Mode Terang';
+    } else {
+      localStorage.setItem('darkMode', 'disabled');
+      toggleDarkMode.textContent = 'Mode Gelap';
+    }
+  });
+});
+
 function filterList() {
   const input = document.getElementById('searchInput').value.toLowerCase();
   const doctorItems = document.querySelectorAll('.doctor-item');
@@ -431,8 +544,6 @@ function filterList() {
 }
     </script>
     <div id="doctorList" class="doctor-list"></div>
-    <label for="message">Keluhan Anda:</label>
-    <textarea id="message" placeholder="Tulis keluhan Anda" required></textarea>
     <input type="hidden" id="csrfToken" name="_csrf" value="">
     <button id="logoutButton" type="button">Keluar</button>
     <button id="deleteAccountButton" type="button"><i class="fas fa-trash-alt"></i> Hapus Akun</button>
