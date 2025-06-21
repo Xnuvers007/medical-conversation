@@ -1,95 +1,48 @@
-/*==============================================================*/
-/* DBMS name:      MySQL 5.0                                    */
-/* Created on:     08/05/2025 07:19:19                          */
-/*==============================================================*/
-
-
-drop table if exists bookings;
-
-drop table if exists doctors;
-
-drop table if exists messages;
-
-drop table if exists user_logs;
-
-drop table if exists users;
-
-/*==============================================================*/
-/* Table: bookings                                              */
-/*==============================================================*/
-create table bookings
-(
-   id                   INTEGER not null,
-   user_id              INTEGER,
-   doctor_id            INTEGER,
-   message              TEXT,
-   created_at           DATETIME default CURRENT_TIMESTAMP,
-   is_active            BOOLEAN default 1,
-   primary key (id)
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255),
+  role ENUM('admin', 'patient'),
+  username VARCHAR(255) UNIQUE,
+  password VARCHAR(255),
+  welcome_sent BOOLEAN DEFAULT FALSE
 );
 
-/*==============================================================*/
-/* Table: doctors                                               */
-/*==============================================================*/
-create table doctors
-(
-   id                   INTEGER not null,
-   name                 TEXT,
-   specialization       TEXT,
-   phone                TEXT,
-   photo_url            TEXT,
-   primary key (id)
+CREATE TABLE IF NOT EXISTS doctors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255),
+  specialization VARCHAR(255),
+  phone VARCHAR(50),
+  photo_url TEXT,
+  welcome_sent BOOLEAN DEFAULT FALSE
 );
 
-/*==============================================================*/
-/* Table: messages                                              */
-/*==============================================================*/
-create table messages
-(
-   id                   INTEGER not null,
-   booking_id           INTEGER,
-   sender               TEXT,
-   message              TEXT,
-   msg_id               TEXT,
-   has_media            BOOLEAN,
-   timestamp            DATETIME default CURRENT_TIMESTAMP,
-   primary key (id)
+CREATE TABLE IF NOT EXISTS bookings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  doctor_id INT,
+  message TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_active BOOLEAN DEFAULT TRUE,
+  notified_end BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
 );
 
-/*==============================================================*/
-/* Table: user_logs                                             */
-/*==============================================================*/
-create table user_logs
-(
-   id                   INTEGER not null,
-   user_id              INTEGER,
-   action               TEXT,
-   timestamp            DATETIME default CURRENT_TIMESTAMP,
-   primary key (id)
+CREATE TABLE IF NOT EXISTS messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  booking_id INT,
+  sender ENUM('doctor', 'patient'),
+  message TEXT,
+  msg_id VARCHAR(255),
+  has_media BOOLEAN,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
 );
 
-/*==============================================================*/
-/* Table: users                                                 */
-/*==============================================================*/
-create table users
-(
-   id                   INTEGER not null,
-   name                 TEXT,
-   role                 TEXT,
-   username             TEXT,
-   password             TEXT,
-   primary key (id)
+CREATE TABLE IF NOT EXISTS user_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  action TEXT,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-
-alter table bookings add constraint FK_Reference_1 foreign key (user_id)
-      references users (id);
-
-alter table bookings add constraint FK_Reference_2 foreign key (doctor_id)
-      references doctors (id);
-
-alter table messages add constraint FK_Reference_3 foreign key (booking_id)
-      references bookings (id);
-
-alter table user_logs add constraint FK_Reference_4 foreign key (user_id)
-      references users (id);
-
