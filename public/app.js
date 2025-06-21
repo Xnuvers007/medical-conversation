@@ -6,7 +6,12 @@ document.addEventListener('DOMContentLoaded', function () {
       })
       .catch(err => {
         console.error('Gagal mengambil token CSRF:', err);
-        alert('Gagal memuat token CSRF. Silakan muat ulang halaman.');
+        // alert('Gagal memuat token CSRF. Silakan muat ulang halaman.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal Memuat Token CSRF',
+            text: 'Silakan muat ulang halaman.',
+        });
       });
   });
 

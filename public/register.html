@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" oncontextmenu="return false;">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!-- <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"> -->
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -48,6 +48,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.5/purify.min.js" integrity="sha512-/CUtA84sWWqWEBejNrrtWa7Yc4cth3Ome2ymvCKOo9YcZ4sh98tndUy4LutE2xGcAgD4fyz16y+gSyJdGCB5ww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 .toggle-password {
     position: absolute;
@@ -66,9 +67,6 @@
   .toggle-password:hover {
     color: var(--primary-color);
   }
-
-
-    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
     :root {
       --medical-primary: #2563eb;
@@ -432,6 +430,7 @@
       align-items: center;
       justify-content: center;
       margin-right: 12px;
+      color: #2563eb;
       box-shadow: var(--shadow-soft);
       animation: iconBreathe 3s ease-in-out infinite;
     }
@@ -594,7 +593,7 @@
       
       <div class="form-field">
         <label for="name">Nama Lengkap</label>
-        <input type="text" id="name" placeholder="Masukkan nama lengkap Anda" required autocomplete="name" title="Nama lengkap harus diisi">
+        <input type="text" id="name" placeholder="Masukkan nama lengkap Anda" required autocomplete="name" title="Nama lengkap harus diisi" maxlength="50">
       </div>
       
       <div class="form-field">
@@ -605,7 +604,7 @@
       
       <div class="form-field">
         <label for="password">Kata Sandi</label>
-        <input type="password" id="password" minlength="8" placeholder="Buat kata sandi yang aman" required autocomplete="new-password" title="Kata sandi harus terdiri dari minimal 8 karakter.">
+        <input type="password" id="password" minlength="8" placeholder="Buat kata sandi yang aman" required autocomplete="new-password" title="Kata sandi harus terdiri dari minimal 8 karakter." maxlength="30">
 	<button type="button" id="togglePassword" class="toggle-password" title="lihat password">
    	     <i class="fas fa-eye"></i>
 	</button>

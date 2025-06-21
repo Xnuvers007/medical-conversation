@@ -1,7 +1,7 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
-const { initWhatsAppBot } = require('./bot');
+const { initWhatsAppBot, sendOtpViaBot } = require('./bot');
 const path = require('path');
 const session = require('express-session');
 const crypto = require('crypto');
@@ -20,6 +20,9 @@ const randomHex = crypto.randomBytes(16).toString('hex');
 
 const app = express();
 const db = new sqlite3.Database('./db.sqlite');
+
+const otpStore = {};
+const otpRequestStore = {};
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -81,6 +84,12 @@ const registerLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 menit
     max: 5, // Maksimum 5 permintaan registrasi
     message: "Terlalu banyak permintaan registrasi, coba lagi nanti.",
+});
+
+const otpLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 menit
+    max: 20, // Maksimum 5 permintaan OTP
+    message: "Terlalu banyak permintaan OTP, coba lagi nanti.",
 });
   
 
@@ -265,7 +274,10 @@ app.post('/register', registerLimiter, [
   body('password')
     .isLength({ min: 8 }).withMessage('Password harus memiliki minimal 6 karakter')
     .not().matches(/\s/).withMessage('Password tidak boleh mengandung spasi'),
-  body('name').notEmpty().withMessage('Name is required'),
+  body('name').notEmpty().withMessage('Name is required').isLength({ max: 50 }).withMessage('Name cannot exceed 50 characters'),
+  body('username').isLength({ max: 15 }).withMessage('Username cannot exceed 15 characters or number'),
+  body('password').isLength({ max: 30 }).withMessage('Password cannot exceed 30 characters')
+
 ], (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -275,22 +287,6 @@ app.post('/register', registerLimiter, [
     const { username, password, name } = req.body;
     console.log(`Mencoba mendaftarkan pengguna baru: ${username}`);
   
-  // Periksa apakah nomor sudah terdaftar sebagai dokter
-  db.get(`SELECT * FROM doctors WHERE phone = ?`, [username], (err, doctor) => {
-    if (err) {
-      console.error('Database error:', err);
-      return res.status(500).json({ status: 'error', message: 'Database error' });
-    }
-
-    if (doctor) {
-      // Jika nomor sudah terdaftar sebagai dokter, tolak pendaftaran
-      return res.status(400).json({ 
-        status: 'error', 
-        message: 'Nomor ini sudah terdaftar dan tidak dapat digunakan untuk pendaftaran pasien.' 
-      });
-    }
-
-    // Lanjutkan dengan pendaftaran jika nomor belum terdaftar sebagai dokter
     db.run(`INSERT INTO users (name, role, username, password) VALUES (?, 'patient', ?, ?)`,
       [name, username, password], function (err) {
         if (err) {
@@ -302,7 +298,6 @@ app.post('/register', registerLimiter, [
         res.json({ status: 'success' });
       });
   });
-});
   // Login route
   app.post('/login', loginLimiter, (req, res) => {
     const { username, password } = req.body;
@@ -528,6 +523,173 @@ app.get('/admin/users', isAuthenticated && isAdmin, (req, res) => {
     });
   });
 
+  app.post('/forgot-password/send-otp', [
+    body('phone')
+      .isMobilePhone('any', { strictMode: false }) // Memastikan nomor telepon valid
+      .withMessage('Nomor telepon tidak valid'),
+    body('phone')
+      .notEmpty()
+      .withMessage('Nomor telepon tidak boleh kosong'),
+    body('phone')
+      .isLength({ max: 15 })
+      .withMessage('Nomor telepon tidak boleh lebih dari 15 karakter'),
+  ], otpLimiter, async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    
+    const { phone } = req.body;
+
+        // Validasi nomor telepon
+        if (!req.body.phone || typeof req.body.phone !== 'string') {
+          return res.status(400).json({ error: 'Nomor telepon tidak valid' });
+        }
+  
+    // Periksa apakah nomor telepon terdaftar
+    db.get(`SELECT * FROM users WHERE username = ?`, [phone], async (err, user) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Terjadi kesalahan pada server.' });
+      }
+  
+      if (!user) {
+        return res.status(404).json({ error: 'Nomor tersebut tidak tersedia.' });
+      }
+  
+      // Periksa apakah nomor sudah mencapai batas permintaan
+      const now = Date.now();
+      if (!otpRequestStore[phone]) {
+        otpRequestStore[phone] = { count: 0, lastRequestTime: 0 };
+      }
+  
+      const { count, lastRequestTime } = otpRequestStore[phone];
+  
+      // Jika sudah mencapai batas 3 permintaan, periksa waktu tunggu
+      if (count >= 3) {
+        // const waitTime = Math.random() * (10 - 1) + 1; // Random antara 1 hingga 10 menit
+        const waitTime = Math.random() * (2 - 1) + 1; // Random antara 1 hingga 2 menit
+        const waitUntil = lastRequestTime + waitTime * 60 * 1000; // Waktu tunggu dalam milidetik
+  
+        if (now < waitUntil) {
+          const remainingTime = Math.ceil((waitUntil - now) / 1000 / 60); // Sisa waktu dalam menit
+          return res.status(429).json({ error: `Anda telah mencapai batas permintaan OTP. Silakan coba lagi dalam ${remainingTime} menit.` });
+        }
+  
+        // Reset hitungan setelah waktu tunggu selesai
+        otpRequestStore[phone].count = 0;
+      }
+  
+      // Generate OTP 6 digit
+      const otp = crypto.randomInt(100000, 999999);
+      otpStore[phone] = { otp, expiresAt: now + 2 * 60 * 1000 }; // OTP berlaku selama 2 menit
+  
+      // Kirim OTP melalui bot WhatsApp
+      const success = await sendOtpViaBot(phone, otp);
+      if (success) {
+        otpRequestStore[phone].count += 1; // Tambahkan hitungan permintaan
+        otpRequestStore[phone].lastRequestTime = now; // Perbarui waktu permintaan terakhir
+        res.json({ status: 'success', message: 'Kode OTP telah dikirim.' });
+      } else {
+        res.status(500).json({ error: 'Gagal mengirim kode OTP.' });
+      }
+    });
+  });
+
+  app.post('/forgot-password/verify-otp', otpLimiter, [
+    body('phone')
+      .isMobilePhone('any', { strictMode: false }) // Memastikan nomor telepon valid
+      .withMessage('Nomor telepon tidak valid').notEmpty().withMessage('Nomor telepon tidak boleh kosong')
+      .isLength({ max: 15 }).withMessage('Nomor telepon tidak boleh lebih dari 15 karakter'),
+    body('otp')
+      .isNumeric().withMessage('Kode OTP harus berupa angka')
+      .isLength({ min: 6, max: 6 }).withMessage('Kode OTP harus terdiri dari 6 digit'),
+  ], (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { phone, otp } = req.body;
+
+        // Validasi nomor telepon dan OTP
+        if (!req.body.phone || typeof req.body.phone !== 'string') {
+          return res.status(400).json({ error: 'Nomor telepon tidak valid' });
+        }
+      
+        if (!req.body.otp || typeof req.body.otp !== 'string' || isNaN(req.body.otp)) {
+          return res.status(400).json({ error: 'Kode OTP tidak valid' });
+        }
+  
+    const storedOtp = otpStore[phone];
+    if (!storedOtp) {
+      return res.status(400).json({ error: 'Kode OTP tidak ditemukan atau telah kedaluwarsa.' });
+    }
+  
+    if (storedOtp.otp !== parseInt(otp)) {
+      return res.status(400).json({ error: 'Kode OTP tidak valid.' });
+    }
+  
+    if (Date.now() > storedOtp.expiresAt) {
+      delete otpStore[phone];
+      return res.status(400).json({ error: 'Kode OTP telah kedaluwarsa.' });
+    }
+  
+    // OTP valid, hapus dari store
+    delete otpStore[phone];
+    res.json({ status: 'success', message: 'Kode OTP valid. Anda dapat mengubah password.' });
+  });
+  
+  app.post('/forgot-password/change-password', [
+    body('phone')
+      .isMobilePhone('any', { strictMode: false }) // Memastikan nomor telepon valid
+      .withMessage('Nomor telepon tidak valid').notEmpty().withMessage('Nomor telepon tidak boleh kosong')
+      .isLength({ max: 15 }).withMessage('Nomor telepon tidak boleh lebih dari 15 karakter'),
+    body('newPassword')
+      .isLength({ min: 8 }).withMessage('Password harus memiliki minimal 8 karakter')
+      .not().matches(/\s/).withMessage('Password tidak boleh mengandung spasi'),
+    body('newPassword')
+      .isLength({ max: 30 }).withMessage('Password tidak boleh lebih dari 30 karakter'),
+    body('newPassword')
+      .notEmpty().withMessage('Password baru tidak boleh kosong'),
+  ], (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { phone, newPassword } = req.body;
+
+        // Validasi nomor telepon dan password baru
+        if (!req.body.phone || typeof req.body.phone !== 'string') {
+          return res.status(400).json({ error: 'Nomor telepon tidak valid' });
+        }
+        if (!req.body.newPassword || typeof req.body.newPassword !== 'string') {
+          return res.status(400).json({ error: 'Password baru tidak valid' });
+        }
+        if (/\s/.test(req.body.newPassword)) {
+          return res.status(400).json({ error: 'Password baru tidak boleh mengandung spasi' });
+        }
+        if (req.body.newPassword.length < 8) {
+          return res.status(400).json({ error: 'Password baru harus memiliki minimal 8 karakter' });
+        }
+        if (req.body.newPassword.length > 30) {
+          return res.status(400).json({ error: 'Password baru tidak boleh lebih dari 30 karakter' });
+        }
+        if (!req.body.newPassword) {
+          return res.status(400).json({ error: 'Password baru tidak boleh kosong' });
+        }
+  
+    // Perbarui password di database
+    db.run(`UPDATE users SET password = ? WHERE username = ?`, [newPassword, phone], (err) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Gagal mengubah password.' });
+      }
+  
+      res.json({ status: 'success', message: 'Password berhasil diubah.' });
+    });
+  });
 
 initWhatsAppBot(db);
 

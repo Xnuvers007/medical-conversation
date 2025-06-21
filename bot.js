@@ -12,6 +12,7 @@ require('dotenv').config();
 
 const activeSessions = {};
 const logger = pino({ level: 'info' });
+let sock;
 
 const { DEEPSEEKER_API_KEY } = process.env;
 if (!DEEPSEEKER_API_KEY) {
@@ -69,7 +70,7 @@ async function queryAI(question) {
 
 async function initWhatsAppBot(db) {
   const { state, saveCreds } = await useMultiFileAuthState('auth');
-  let sock = makeWASocket({
+  sock = makeWASocket({
     logger: pino({ level: 'info' }),
     auth: state,
     printQRInTerminal: true,
@@ -232,6 +233,7 @@ async function initWhatsAppBot(db) {
   /////////////////////////////
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
+    logger.info("Pesan baru diterima:", messages);
     const msg = messages[0];
     if (!msg.message || msg.key.fromMe) return;
 
@@ -933,4 +935,19 @@ function getExtensionFromMimetype(mimetype) {
   return mimeMap[mimetype] || 'bin';
 }
 
-module.exports = { initWhatsAppBot };
+async function sendOtpViaBot(phone, otp) {
+  try {
+    const message = `Kode OTP Anda adalah ${otp}. Berlaku selama 2 menit.`;
+    const targetJid = `${phone}@s.whatsapp.net`;
+
+    await sock.sendMessage(targetJid, { text: message });
+    console.log(`Kode OTP berhasil dikirim ke nomor ${phone}`);
+    return true; // Indikasi sukses
+  } catch (error) {
+    console.error(`Gagal mengirim kode OTP ke nomor ${phone}:`, error);
+    return false; // Indikasi gagal
+  }
+}
+
+
+module.exports = { initWhatsAppBot, sendOtpViaBot };

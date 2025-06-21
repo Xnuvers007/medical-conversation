@@ -579,7 +579,6 @@
     <button type="button" id="toggleDarkMode">
       Mode Gelap
     </button>
-    <br /><br />
     <form id="addDoctorForm" novalidate autocomplete="on">
       <input type="hidden" id="csrfToken" name="_csrf" value="">
       <label for="name">Nama Dokter:</label>
@@ -992,19 +991,49 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
 
     users.forEach(user => {
       const userItem = document.createElement('li');
+
       const SanitizedName = DOMPurify.sanitize(user.name);
       const SanitizedUsername = DOMPurify.sanitize(user.username);
       const SanitizedRole = DOMPurify.sanitize(user.role);
       const SanitizedId = DOMPurify.sanitize(user.id);
+
+      const host = window.location.origin;
+
+      const avatarSources = [
+        `https://avatar.iran.liara.run/username?username=${encodeURIComponent(SanitizedName)}`,
+        `${host}/gambar/${encodeURIComponent(SanitizedName.toLowerCase())}.jpg`,
+        `https://i.pinimg.com/736x/1a/a8/d7/1aa8d75f3498784bcd2617b3e3d1e0c4.jpg`,
+        `https://i.pinimg.com/736x/2a/7a/58/2a7a58dbad7e82818d5673f64e41648f.jpg`
+      ];
+
+      const imgId = `user-avatar-${SanitizedId}`;
+      const initialSrc = avatarSources[0];
+
       userItem.innerHTML = `
-        <img src="https://avatar.iran.liara.run/username?username=${SanitizedName}" alt="${SanitizedName}" loading="eager">
+        <img id="${imgId}" src="${initialSrc}" alt="${SanitizedName}" loading="eager">
         <div class="user-info">
           <span class="user-name">${SanitizedName} (${SanitizedUsername})</span>
           <span class="user-role">Role: ${SanitizedRole}</span>
         </div>
-        <button type="button" class="deleteUserButton" data-id="${SanitizedId}"><i class="fas fa-trash-alt"></i> Hapus</button>
+        <button type="button" class="deleteUserButton" data-id="${SanitizedId}">
+          <i class="fas fa-trash-alt"></i> Hapus
+        </button>
       `;
+
       userList.appendChild(userItem);
+
+      const imgElement = document.getElementById(imgId);
+      let fallbackIndex = 1;
+
+      imgElement.onerror = function () {
+        if (fallbackIndex < avatarSources.length) {
+          this.src = avatarSources[fallbackIndex];
+          fallbackIndex++;
+        } else {
+          // this.src = 'https://via.placeholder.com/80x80?text=No+Image';
+          this.src = 'https://picsum.photos/200/300'
+        }
+      };
     });
   })
   .catch(error => console.error('Error:', error));
