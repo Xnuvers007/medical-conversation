@@ -379,11 +379,26 @@ app.get('/get-user', isAuthenticated || isUser, (req, res) => {
   
   // Add new doctor (admin only)
   app.post('/doctors', csrfProtection, isAuthenticated && isAdmin, [
-    body('name').notEmpty().withMessage('Name is required'),
-    body('specialization').notEmpty().withMessage('Specialization is required'),
-    body('phone').notEmpty().withMessage('Phone number is required'),
-    body('photo_url').isURL().withMessage('Photo URL must be a valid URL')
+    body('name')
+    .notEmpty().withMessage('Nama harus diisi')
+    .matches(/^[A-Za-z .,'-]+$/).withMessage('Nama hanya boleh berisi huruf, spasi, dan tanda baca sederhana'),
+  body('specialization')
+    .notEmpty().withMessage('Spesialisasi harus diisi')
+    .matches(/^[A-Za-z .,'-]+$/).withMessage('Spesialisasi hanya boleh berisi huruf, spasi, dan tanda baca sederhana'),
+  body('phone')
+    .notEmpty().withMessage('Nomor telepon harus diisi')
+    .matches(/^(62)[0-9]{8,13}$/).withMessage('Nomor telepon harus dalam format 62xxx'),
+  body('photo_url')
+    .notEmpty().withMessage('URL foto harus diisi')
+    .isURL().withMessage('URL foto harus valid')
+    .matches(/\.(jpg|jpeg|png|gif)$/i).withMessage('URL foto harus diakhiri dengan format gambar yang valid (.jpg, .jpeg, .png, .gif)')
   ] ,(req, res) => {
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     if (!req.session.user) return res.status(403).json({ error: 'Unauthorized' });
     const { name, specialization, phone, photo_url } = req.body;
     

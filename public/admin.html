@@ -579,14 +579,15 @@
     <button type="button" id="toggleDarkMode">
       Mode Gelap
     </button>
+    <!-- Perbarui form di admin.html -->
     <form id="addDoctorForm" novalidate autocomplete="on">
       <input type="hidden" id="csrfToken" name="_csrf" value="">
       <label for="name">Nama Dokter:</label>
-      <input type="text" id="name" name="name" placeholder="Nama Dokter" required autocomplete="name">
+      <input type="text" id="name" name="name" pattern="^[A-Za-z .,'-]+$" placeholder="Nama Dokter" required autocomplete="name">
       <label for="specialization">Spesialisasi:</label>
-      <input type="text" id="specialization" name="specialization" placeholder="Spesialisasi" required autocomplete="organization-title">
+      <input type="text" id="specialization" name="specialization" pattern="^[A-Za-z .,'-]+$" placeholder="Spesialisasi" required autocomplete="organization-title">
       <label for="phone">Nomor WhatsApp:</label>
-      <input type="text" id="phone" name="phone" placeholder="Nomor WhatsApp (62xxx)" required autocomplete="tel">
+      <input type="text" id="phone" name="phone" pattern="^(62)[0-9]{8,13}$" placeholder="Nomor WhatsApp (62xxx)" required autocomplete="tel">
       <label for="photo_url">Foto Dokter (URL):</label>
       <input type="text" id="photo_url" name="photo_url" placeholder="Foto URL" required autocomplete="url">
       <button type="submit">Tambah Dokter</button>
@@ -883,12 +884,58 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
 
     document.getElementById('addDoctorForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      const name = document.getElementById('name').value;
-      const specialization = document.getElementById('specialization').value;
-      const phone = document.getElementById('phone').value;
-      const photo_url = document.getElementById('photo_url').value;
+      const name = DOMPurify.sanitize(document.getElementById('name').value.trim());
+      const specialization = DOMPurify.sanitize(document.getElementById('specialization').value.trim());
+      const phone = DOMPurify.sanitize(document.getElementById('phone').value.trim());
+      const photo_url = DOMPurify.sanitize(document.getElementById('photo_url').value.trim());
+      
       const csrfToken = document.getElementById('csrfToken').value;
 
+      // Validasi nama (hanya huruf, spasi, dan beberapa karakter khusus)
+      const nameRegex = /^[A-Za-z .,'-]+$/;
+      if (!nameRegex.test(name)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Nama dokter tidak valid. Hanya boleh berisi huruf, spasi, dan tanda baca sederhana.'
+        });
+        return;
+      }
+
+      // Validasi spesialisasi (hanya huruf, spasi, dan beberapa karakter khusus)
+      const specializationRegex = /^[A-Za-z .,'-]+$/;
+      if (!specializationRegex.test(specialization)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Spesialisasi tidak valid. Hanya boleh berisi huruf, spasi, dan tanda baca sederhana.'
+        });
+        return;
+      }
+
+      // Validasi nomor telepon (format 62xxx)
+      const phoneRegex = /^(62)[0-9]{8,13}$/;
+      if (!phoneRegex.test(phone)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Nomor WhatsApp tidak valid. Gunakan format 62xxx.'
+        });
+        return;
+      }
+
+      // Validasi URL foto
+      const urlRegex = /^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i;
+      if (!urlRegex.test(photo_url)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'URL foto tidak valid. Gunakan URL yang diakhiri dengan .jpg, .jpeg, .png, atau .gif.'
+        });
+        return;
+      }
+
+      // Jika semua validasi lolos, kirim data
       fetch('/doctors', {
         method: 'POST',
         headers: {
@@ -900,10 +947,25 @@ document.getElementById('lihatLogsButton').addEventListener('click', function ()
       })
       .then(res => {
         if (!res.ok) throw new Error('Gagal menambah dokter');
-        loadDoctors();
-        e.target.reset();
+        return res.json();
       })
-      .catch(error => console.error('Error:', error));
+      .then(data => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: 'Dokter berhasil ditambahkan!'
+        });
+        loadDoctors();
+        this.reset();
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: 'Gagal menambahkan dokter. Silakan coba lagi.'
+        });
+      });
     });
 
     function deleteUser(userId) {
