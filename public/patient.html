@@ -395,6 +395,9 @@
   <div class="container">
     <h2>Pemesanan Konsultasi Dokter</h2>
     <br />
+    <label for="message">Keluhan Anda:</label>
+    <textarea id="message" placeholder="Tulis keluhan Anda" required></textarea>
+    <br />
     <label for="searchInput">Cari Dokter:</label>
     <input type="text" id="searchInput" placeholder="Cari dokter" oninput="filterList()">
     <script>
@@ -431,8 +434,6 @@ function filterList() {
 }
     </script>
     <div id="doctorList" class="doctor-list"></div>
-    <label for="message">Keluhan Anda:</label>
-    <textarea id="message" placeholder="Tulis keluhan Anda" required></textarea>
     <input type="hidden" id="csrfToken" name="_csrf" value="">
     <button id="logoutButton" type="button">Keluar</button>
     <button id="deleteAccountButton" type="button"><i class="fas fa-trash-alt"></i> Hapus Akun</button>
